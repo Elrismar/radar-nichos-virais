@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101827">
-<meta name="description" content="Painel de pesquisa manual de oportunidades de conteúdo no YouTube, em diferentes nichos, países e idiomas.">
+<meta name="description" content="Pesquise oportunidades de conteúdo no YouTube em diversos nichos, países e idiomas.">
 <title>Radar de Nichos Virais</title>
 <style>
 :root {
@@ -64,6 +64,7 @@ input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{
 .line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .empty{padding:28px;text-align:center;color:var(--muted);grid-column:1/-1}
+.empty a{color:var(--accent);font-weight:700}
 footer{padding:20px 0;color:var(--muted);font-size:12px}
 .warn{border-left:3px solid var(--gold);padding:10px 12px;background:#241f16;color:#e6d7af;border-radius:7px;margin:10px 0 16px;font-size:12px}
 .error{border-color:#744343;color:#ffd0d0}
@@ -94,18 +95,19 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
 <header>
   <h1>Radar de Nichos Virais <span style="color:var(--accent)">↗</span></h1>
   <div class="sub">
-    Pesquise manualmente oportunidades de conteúdo no YouTube em diferentes nichos,
-    países e idiomas. Compare visualizações, tamanho dos canais, idade dos vídeos
-    e outros indicadores usando dados da YouTube Data API.
+    Explore oportunidades de conteúdo no YouTube em diferentes nichos,
+    países e idiomas. Compare visualizações, tamanho dos canais, idade
+    dos vídeos e indicadores de desempenho.
   </div>
 </header>
 
 <main class="wrap">
   <div class="warn">
-    <strong>Pesquisa manual:</strong> os resultados só mudam quando uma nova coleta é
-    executada no GitHub Actions. Não há atualização automática programada pelo painel.
-    A API oficial não mostra todos os vídeos, e idioma e país podem ser estimativas.
-    Pontuações são indicadores, não garantias de viralização.
+    <strong>Sobre os dados:</strong> este painel mostra os vídeos registrados
+    na última coleta do GitHub Actions. A busca abaixo filtra os dados disponíveis;
+    ela não inicia uma nova consulta à API do YouTube. Para encontrar vídeos
+    que ainda não foram coletados, use o link de pesquisa externa quando disponível.
+    A API não retorna todos os vídeos, e as pontuações não garantem viralização.
   </div>
 
   <section class="stats" aria-label="Resumo dos resultados">
@@ -117,8 +119,11 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
 
   <section class="filters" aria-label="Filtros de pesquisa">
     <div class="field wide">
-      <label for="q">Buscar tema, vídeo ou canal</label>
-      <input id="q" type="search" placeholder="Ex.: futebol, beleza, histórias, games, negócios">
+      <label for="q">Buscar tema, palavra, vídeo ou canal</label>
+      <input id="q" type="search"
+        placeholder="Ex.: Fórmula 1, terror, beleza, histórias, games..."
+        autocomplete="off">
+      <span class="small">Aceita diferenças de acentos e pequenos erros de digitação.</span>
     </div>
 
     <div class="field">
@@ -163,9 +168,9 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
       <label for="subs">Máx. inscritos</label>
       <select id="subs">
         <option value="10000">10 mil</option>
-        <option value="50000" selected>50 mil</option>
+        <option value="50000">50 mil</option>
         <option value="100000">100 mil</option>
-        <option value="0">Sem limite</option>
+        <option value="0" selected>Sem limite</option>
       </select>
     </div>
 
@@ -173,9 +178,9 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
       <label for="videos">Máx. vídeos no canal</label>
       <select id="videos">
         <option value="10">10</option>
-        <option value="20" selected>20</option>
+        <option value="20">20</option>
         <option value="50">50</option>
-        <option value="0">Sem limite</option>
+        <option value="0" selected>Sem limite</option>
       </select>
     </div>
 
@@ -183,18 +188,18 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
       <label for="age">Idade do vídeo</label>
       <select id="age">
         <option value="7">Até 7 dias</option>
-        <option value="30" selected>Até 30 dias</option>
+        <option value="30">Até 30 dias</option>
         <option value="90">Até 90 dias</option>
-        <option value="0">Qualquer data</option>
+        <option value="0" selected>Qualquer data</option>
       </select>
     </div>
 
     <div class="field">
       <label for="minscore">Pontuação mínima</label>
       <select id="minscore">
-        <option value="0">0+</option>
+        <option value="0" selected>0+ (todos)</option>
         <option value="40">40+</option>
-        <option value="60" selected>60+</option>
+        <option value="60">60+</option>
         <option value="75">75+</option>
       </select>
     </div>
@@ -226,9 +231,9 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
   <section id="results" class="results" aria-label="Vídeos encontrados"></section>
 
   <footer>
-    Radar de Nichos Virais · Painel experimental de pesquisa manual.
-    Os dados vêm da YouTube Data API v3. O sistema não usa scraping.
-    Os idiomas disponíveis no filtro não garantem que o coletor já pesquise todos eles.
+    Radar de Nichos Virais · Painel de pesquisa de oportunidades.
+    Os dados registrados vêm da YouTube Data API v3 por meio do coletor.
+    A disponibilidade de idiomas depende das consultas efetivamente executadas.
     Respeite as licenças e políticas da plataforma ao utilizar os resultados.
   </footer>
 </main>
@@ -244,6 +249,333 @@ const $ = id => document.getElementById(id);
 
 const fmt = n => {
   if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) {
+    return 'N/D';
+  }
+  return Intl.NumberFormat('pt-BR', {
+    notation: Number(n) >= 10000 ? 'compact' : 'standard',
+    maximumFractionDigits: 1
+  }).format(Number(n));
+};
+
+const days = date => {
+  if (!date) return null;
+  const timestamp = Date.parse(date);
+  if (!Number.isFinite(timestamp)) return null;
+  const age = (Date.now() - timestamp) / 86400000;
+  return Number.isFinite(age) ? Math.max(0, age) : null;
+};
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;',
+  "'":'&#39;'
+}[char]));
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function normalizeText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  let previous = Array.from(
+    {length: b.length + 1},
+    (_, i) => i
+  );
+
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+
+    previous = current;
+  }
+
+  return previous[b.length];
+}
+
+function matchesSearch(text, query) {
+  const normalizedText = normalizeText(text);
+  const normalizedQuery = normalizeText(query);
+
+  if (!normalizedQuery) return true;
+  if (normalizedText.includes(normalizedQuery)) return true;
+
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+  const textWords = normalizedText.split(/\s+/).filter(Boolean);
+
+  return queryWords.every(queryWord => {
+    if (normalizedText.includes(queryWord)) return true;
+
+    const tolerance = queryWord.length >= 8 ? 2
+      : queryWord.length >= 5 ? 1
+      : 0;
+
+    if (!tolerance) return false;
+
+    return textWords.some(word =>
+      Math.abs(word.length - queryWord.length) <= tolerance &&
+      editDistance(word, queryWord) <= tolerance
+    );
+  });
+}
+
+function displayError(message) {
+  $('results').innerHTML =
+    `<div class="empty error">${esc(message)}<br><br>
+    Confira se o arquivo <code>data/results.json</code> existe e se a última
+    execução manual do GitHub Actions terminou sem erros.</div>`;
+  $('count').textContent = 'Não foi possível carregar os resultados';
+  $('quota').textContent = '';
+}
+
+async function load() {
+  const reloadButton = $('reload');
+  reloadButton.disabled = true;
+  $('count').textContent = 'Carregando dados da última coleta…';
+
+  try {
+    const response = await fetch('./data/results.json?ts=' + Date.now(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        response.status === 404
+          ? 'O arquivo de resultados ainda não existe.'
+          : `Falha ao carregar os dados (HTTP ${response.status}).`
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data || !Array.isArray(data.results)) {
+      throw new Error('O arquivo results.json não contém uma lista válida de resultados.');
+    }
+
+    all = data.results.filter(item => item && typeof item === 'object');
+    hasLoadedData = true;
+
+    $('total').textContent = fmt(data.candidateCount ?? all.length);
+
+    $('small').textContent = fmt(
+      all.filter(item =>
+        item.subscribers != null && Number(item.subscribers) <= 50000
+      ).length
+    );
+
+    $('fresh').textContent = fmt(
+      all.filter(item => {
+        const age = days(item.publishedAt);
+        return age !== null && age <= 7;
+      }).length
+    );
+
+    const generated = data.generatedAt ? new Date(data.generatedAt) : null;
+    $('updated').textContent =
+      generated && Number.isFinite(generated.getTime())
+        ? generated.toLocaleString('pt-BR')
+        : 'Data indisponível';
+
+    const errorCount = Array.isArray(data.errors) ? data.errors.length : 0;
+    const actualCalls = data.searchCalls ?? 'N/D';
+    const plannedCalls = data.searchCallsPlanned ?? 'N/D';
+
+    $('quota').textContent =
+      `Buscas nesta coleta: ${actualCalls}/${plannedCalls}` +
+      (errorCount ? ` · Avisos: ${errorCount}` : '');
+
+    filter();
+  } catch (error) {
+    all = [];
+    shown = [];
+    hasLoadedData = false;
+    $('total').textContent = '—';
+    $('small').textContent = '—';
+    $('fresh').textContent = '—';
+    $('updated').textContent = '—';
+
+    displayError(
+      error instanceof SyntaxError
+        ? 'O arquivo de resultados contém JSON inválido.'
+        : (error.message || 'Ocorreu um erro inesperado ao carregar os dados.')
+    );
+  } finally {
+    reloadButton.disabled = false;
+  }
+}
+
+function filter() {
+  const query = $('q').value.trim();
+  const language = $('lang').value.toLowerCase();
+  const maxSubs = Number($('subs').value);
+  const maxVideos = Number($('videos').value);
+  const maxAge = Number($('age').value);
+  const minScore = Number($('minscore').value);
+
+  shown = all.filter(item => {
+    const age = days(item.publishedAt);
+
+    const searchable = [
+      item.title,
+      item.channelTitle,
+      item.description,
+      item.query,
+      item.niche,
+      item.topic,
+      ...(Array.isArray(item.tags) ? item.tags : []),
+      ...(Array.isArray(item.signals) ? item.signals : [])
+    ].filter(Boolean).join(' ');
+
+    if (query && !matchesSearch(searchable, query)) return false;
+
+    const itemLanguage = String(
+      item.language || item.languageHint || ''
+    ).toLowerCase();
+
+    if (language && !itemLanguage.startsWith(language)) return false;
+
+    if (maxSubs && item.subscribers != null &&
+        Number(item.subscribers) > maxSubs) return false;
+
+    if (maxVideos && item.channelVideoCount != null &&
+        Number(item.channelVideoCount) > maxVideos) return false;
+
+    if (maxAge && age !== null && age > maxAge) return false;
+
+    if (Number(item.score || 0) < minScore) return false;
+
+    return true;
+  });
+
+  const sort = $('sort').value;
+  const number = value =>
+    Number.isFinite(Number(value)) ? Number(value) : 0;
+
+  const timestamp = value => {
+    const result = Date.parse(value || '');
+    return Number.isFinite(result) ? result : 0;
+  };
+
+  shown.sort((a, b) => {
+    if (sort === 'views') return number(b.views) - number(a.views);
+
+    if (sort === 'ratio') {
+      return number(b.viewsPerSubscriber) -
+             number(a.viewsPerSubscriber);
+    }
+
+    if (sort === 'velocity') {
+      return number(b.viewsPerDayObserved ?? b.viewsPerDayAverage) -
+             number(a.viewsPerDayObserved ?? a.viewsPerDayAverage);
+    }
+
+    if (sort === 'recent') {
+      return timestamp(b.publishedAt) - timestamp(a.publishedAt);
+    }
+
+    return number(b.score) - number(a.score);
+  });
+
+  $('count').textContent =
+    `${fmt(shown.length)} resultado(s) · exibindo até 150 vídeos`;
+
+  render();
+}
+
+function render() {
+  if (!hasLoadedData) return;
+
+  const rows = shown.slice(0, 150);
+
+  if (!rows.length) {
+    const query = $('q').value.trim();
+
+    const youtubeUrl = query
+      ? 'https://www.youtube.com/results?search_query=' +
+        encodeURIComponent(query)
+      : 'https://www.youtube.com/';
+
+    const explanation = query
+      ? 'Nenhum vídeo da coleta correspondeu a essa busca. Isso não significa que o assunto não exista no YouTube.'
+      : 'Nenhum vídeo corresponde aos filtros atuais. Tente ampliar os filtros.';
+
+    $('results').innerHTML =
+      `<div class="empty">
+        <strong>Não encontramos resultados na base atual.</strong>
+        <p>${esc(explanation)}</p>
+        <p>Você pode pesquisar fora do Radar:</p>
+        <p><a href="${esc(youtubeUrl)}" target="_blank" rel="noopener noreferrer">
+          ${query ? 'Pesquisar este tema no YouTube' : 'Abrir o YouTube'}
+        </a></p>
+        <p class="small">Para que novos vídeos apareçam dentro do Radar, é necessário executar uma nova coleta pelo GitHub Actions.</p>
+      </div>`;
+
+    return;
+  }
+
+  $('results').innerHTML = rows.map(item => {
+    const videoUrl = safeUrl(item.videoUrl);
+    const channelUrl = safeUrl(item.channelUrl) || videoUrl;
+    const thumbnail = safeUrl(item.thumbnail);
+
+    const subscribers = item.subscribers == null
+      ? 'inscritos ocultos'
+      : `${fmt(item.subscribers)} inscritos`;
+
+    const badges = (Array.isArray(item.signals) ? item.signals : [])
+      .map(signal => `<span class="chip">${esc(signal)}</span>`)
+      .join('');
+
+    const velocity = item.viewsPerDayObserved != null
+      ? `${fmt(item.viewsPerDayObserved)} views/dia observadas`
+      : item.viewsPerDayAverage != null
+        ? `${fmt(item.viewsPerDayAverage)} views/dia (média)`
+        : 'Velocidade indisponível';
+
+    const thumbnailHtml = thumbnail && videoUrl
+      ? `<a href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">
+           <img class="thumb" loading="lazy" src="${esc(thumbnail)}"
+                alt="Miniatura do vídeo"
+                onerror="this.style.display='none'">
+         </a>`
+      : '<div class="thumb" aria-hidden="true"></div>';
+
+    const titleHtml = videoUrl
+      ? `<a class="title" href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.title || 'Vídeo sem título')}</a>`
+      : `<span class="title">${esc(item.title || 'Vídeo sem título')}</span>`;
+
+    const channelHtml = channelUrl
+      ? `<a href="${esc(channelUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">${esc(item.channelTitle || 'Canal')}</a>`
+      : esc(item.channelTitle || 'Canal');
+
+    return `<article class="card">
+      ${thumbnailHtml}
+      <div cla| n === '' || !Number.isFinite(Number(n))) {
     return 'N/D';
   }
   return Intl.NumberFormat('pt-BR', {
