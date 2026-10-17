@@ -1,74 +1,205 @@
-import os, json, time, hashlib, datetime
+
+import os
+import json
+import time
+import hashlib
+import datetime
 from pathlib import Path
+
 import requests
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 DATA.mkdir(exist_ok=True)
+
 API_KEY = os.environ.get("YOUTUBE_API_KEY", "").strip()
 BASE = "https://www.googleapis.com/youtube/v3"
 TODAY = datetime.datetime.now(datetime.timezone.utc)
 DAY = TODAY.strftime("%Y-%m-%d")
+
 SEARCH_CALLS_MAX = 48
 TRACKED_MAX = 1800
+RESULTS_MAX = 500
+WINDOW_DAYS = 30
+SMALL_SUBSCRIBERS = 50000
+FEW_VIDEOS = 30
 TIMEOUT = 30
 
-# Intentionally varied themes and language/region pairs. Each run rotates the pairs.
+# Temas variados: entretenimento, negócios, esportes, cultura,
+# tecnologia, jogos, educação, religião, beleza, culinária etc.
 QUERIES = [
-    "true stories", "history mysteries", "science facts", "forgotten history",
-    "strange facts", "space discoveries", "psychology facts", "survival stories",
-    "ancient civilizations", "animal facts", "unsolved mysteries", "documentary",
-    "historias curiosas", "mistérios históricos", "casos inexplicáveis",
-    "historias reales", "curiosidades científicas", "historias de terror",
-    "histoires vraies", "mystères historiques", "faits scientifiques",
-    "wahre Geschichten", "Geschichte Geheimnisse", "Wissenschaft Fakten",
-    "storie vere", "misteri storici", "fatti scientifici",
-    "true crime stories", "mythology explained", "personal finance stories",
-    "short documentary", "life lessons stories"
+    # Histórias, mistérios e curiosidades
+    "true stories", "untold history", "historical mysteries",
+    "strange facts", "unsolved mysteries", "real life stories",
+    "forgotten people", "dark history", "urban legends",
+    "historias curiosas", "historias reales", "misterios sin resolver",
+    "historias de terror", "curiosidades", "historia desconocida",
+    "histoires vraies", "mystères historiques",
+    "wahre Geschichten", "storie vere", "misteri irrisolti",
+
+    # Ciência, tecnologia e espaço
+    "science discoveries", "space discoveries", "technology explained",
+    "artificial intelligence news", "future technology",
+    "experiments explained", "engineering inventions",
+    "curiosidades científicas", "descobertas científicas",
+    "découvertes scientifiques", "Wissenschaft erklärt",
+    "scoperte scientifiche", "科学の雑学", "科技揭秘",
+
+    # Negócios, dinheiro e carreira
+    "business case studies", "entrepreneurship stories",
+    "personal finance education", "company success stories",
+    "marketing strategies", "career advice", "economic explainers",
+    "negocios rentables", "educacion financiera",
+    "histórias de empreendedorismo", "finanças pessoais",
+    "histoires d'entrepreneurs", "Unternehmergeschichten",
+
+    # Esportes e competições
+    "football stories", "basketball highlights analysis",
+    "sports rivalries", "athlete biographies",
+    "combat sports analysis", "extreme sports",
+    "historias del futbol", "histórias do futebol",
+    "histoires du sport", "Sportgeschichten",
+
+    # Jogos e cultura gamer
+    "gaming secrets", "video game lore", "game challenges",
+    "gaming news", "retro gaming", "Minecraft builds",
+    "Roblox stories", "historias de videojuegos",
+    "jeux vidéo secrets", "Videospiel Fakten",
+
+    # Cinema, música e entretenimento
+    "movie analysis", "celebrity stories", "film trivia",
+    "music history", "animation analysis", "TV show theories",
+    "behind the scenes", "cultura pop",
+    "curiosidades de filmes", "histórias da música",
+    "coulisses du cinéma", "Filmgeheimnisse",
+
+    # Culinária, beleza e estilo de vida
+    "easy recipes", "street food", "food experiments",
+    "beauty transformations", "skincare education",
+    "fashion trends", "home organization", "DIY projects",
+    "recetas faciles", "comida callejera",
+    "receitas fáceis", "comida de rua",
+    "recettes faciles", "einfache Rezepte",
+
+    # Educação, psicologia e desenvolvimento pessoal
+    "psychology explained", "learning techniques",
+    "language learning tips", "life lessons",
+    "communication skills", "philosophy explained",
+    "productivity methods", "educacion y aprendizaje",
+    "psicologia explicada", "dicas de estudo",
+    "psychologie erklärt", "apprentissage facile",
+
+    # Natureza, animais e meio ambiente
+    "wildlife behavior", "ocean discoveries", "animal behavior",
+    "natural disasters explained", "extreme weather",
+    "environmental discoveries", "vida selvagem",
+    "curiosidades de animales", "faune sauvage",
+
+    # Religião, mitologia e arqueologia
+    "biblical mysteries", "religious history",
+    "mythology explained", "archaeological discoveries",
+    "ancient civilizations", "religious curiosities",
+    "misterios biblicos", "curiosidades da Bíblia",
+    "mitologia", "descobertas arqueológicas",
+    "mythologie", "archäologische Entdeckungen",
+
+    # Notícias, sociedade, viagens e cotidiano
+    "explained world events", "geography facts",
+    "travel hidden gems", "cultural differences",
+    "consumer product reviews", "everyday science",
+    "historias de viajes", "curiosidades del mundo",
+    "destinos escondidos", "kulturelle Unterschiede",
+
+    # Formatos e públicos diversos
+    "short documentaries", "video essays", "educational shorts",
+    "satisfying videos", "restoration projects",
+    "craftsmanship", "survival skills", "incredible inventions",
+    "comedy sketches", "pranks and reactions",
+    "relatable situations", "family entertainment",
+    "animation stories", "stop motion animation",
+    "asmr", "podcast clips", "interviews",
+    "news commentary", "product comparisons",
+    "tutorial for beginners", "how things are made"
 ]
+
+# Idiomas e regiões de pesquisa.
+# O país e o idioma são sinais de busca, não garantias de origem.
 PAIRS = [
     ("en", "US"), ("en", "GB"), ("en", "CA"), ("en", "AU"),
     ("es", "MX"), ("es", "ES"), ("es", "AR"), ("pt", "BR"),
     ("pt", "PT"), ("fr", "FR"), ("fr", "CA"), ("de", "DE"),
     ("it", "IT"), ("hi", "IN"), ("ja", "JP"), ("ko", "KR"),
     ("id", "ID"), ("tr", "TR"), ("ar", "SA"), ("nl", "NL"),
-    ("pl", "PL"), ("th", "TH"), ("vi", "VN"), ("sv", "SE")
+    ("pl", "PL"), ("th", "TH"), ("vi", "VN"), ("sv", "SE"),
+    ("ru", "RU"), ("zh", "TW"), ("zh", "HK"), ("da", "DK"),
+    ("hr", "HR"), ("no", "NO"), ("fi", "FI"), ("cs", "CZ"),
+    ("el", "GR"), ("he", "IL"), ("ro", "RO"), ("hu", "HU"),
+    ("bn", "BD"), ("ta", "IN"), ("te", "IN"), ("ur", "PK")
 ]
-WINDOW_DAYS = 30
-SMALL_SUBSCRIBERS = 50000
-FEW_VIDEOS = 30
+
 
 def read_json(path, default):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
         return default
 
+
 def write_json(path, value):
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp = path.with_suffix(path.suffix + ".tmp")
+    temp.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    temp.replace(path)
+
 
 def api(endpoint, params, retries=3):
     if not API_KEY:
-        raise RuntimeError("Falta o segredo YOUTUBE_API_KEY no ambiente.")
+        raise RuntimeError("Falta o segredo YOUTUBE_API_KEY.")
+
     p = dict(params)
     p["key"] = API_KEY
-    last = None
+    last_error = None
+
     for attempt in range(retries):
         try:
-            r = requests.get(f"{BASE}/{endpoint}", params=p, timeout=TIMEOUT)
-            if r.status_code == 403:
-                raise RuntimeError("YouTube API retornou 403. Verifique a chave, API ativada e cota diária.")
-            r.raise_for_status()
-            return r.json()
-        except Exception as e:
-            last = e
+            response = requests.get(
+                f"{BASE}/{endpoint}",
+                params=p,
+                timeout=TIMEOUT
+            )
+
+            if response.status_code == 403:
+                try:
+                    detail = response.json().get("error", {}).get(
+                        "errors", [{}]
+                    )[0].get("reason", "")
+                except (ValueError, IndexError, AttributeError):
+                    detail = ""
+
+                raise RuntimeError(
+                    f"YouTube API 403 ({detail or 'permissão ou cota'}). "
+                    "Verifique a chave, a API ativada e a cota."
+                )
+
+            response.raise_for_status()
+            return response.json()
+
+        except RuntimeError:
+            raise
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
             if attempt < retries - 1:
                 time.sleep(2 ** attempt)
-    raise last
 
-def chunks(items, n):
-    for i in range(0, len(items), n):
-        yield items[i:i+n]
+    raise RuntimeError(f"Falha na API {endpoint}: {last_error}")
+
+
+def chunks(items, size):
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
+
 
 def number(value):
     try:
@@ -76,200 +207,361 @@ def number(value):
     except (TypeError, ValueError):
         return None
 
-def score_candidate(video, channel, previous):
+
+def build_search_pool():
+    # Ordem estável, distribuída por temas e idiomas.
+    # Permite percorrer as combinações sem repetir cada uma
+    # até completar o ciclo da lista.
+    pool = []
+
+    for query in QUERIES:
+        for lang, region in PAIRS:
+            signature = f"{query}|{lang}|{region}"
+            order = hashlib.sha256(signature.encode("utf-8")).hexdigest()
+            pool.append((order, query, lang, region))
+
+    pool.sort(key=lambda item: item[0])
+    return [(q, lang, region) for _, q, lang, region in pool]
+
+
+def score_candidate(video, channel, history):
     views = number(video.get("viewCount")) or 0
     subs = number(channel.get("subscriberCount"))
     video_count = number(channel.get("videoCount"))
-    published = video.get("publishedAt")
-    channel_created = channel.get("publishedAt")
-    now = TODAY
+
     try:
-        video_age = max(0.25, (now - datetime.datetime.fromisoformat(published.replace("Z", "+00:00"))).total_seconds()/86400)
-    except Exception:
+        published = datetime.datetime.fromisoformat(
+            video["publishedAt"].replace("Z", "+00:00")
+        )
+        video_age = max(
+            0.25, (TODAY - published).total_seconds() / 86400
+        )
+    except (KeyError, TypeError, ValueError):
         video_age = 30
+
     try:
-        channel_age = max(1, (now - datetime.datetime.fromisoformat(channel_created.replace("Z", "+00:00"))).days)
-    except Exception:
+        created = datetime.datetime.fromisoformat(
+            channel["publishedAt"].replace("Z", "+00:00")
+        )
+        channel_age = max(1, (TODAY - created).days)
+    except (KeyError, TypeError, ValueError):
         channel_age = 9999
 
-    # Views/day is only a rough average until we have multiple snapshots.
-    prior = previous.get(video["id"], [])
+    prior = history.get(video["id"], [])
     velocity = None
-    if prior:
-        old = prior[-1]
-        try:
-            old_date = datetime.date.fromisoformat(old["date"])
-            days = max(1/24, (datetime.date.fromisoformat(DAY) - old_date).days)
-            velocity = max(0, views - int(old.get("views", 0))) / days
-        except Exception:
-            velocity = None
-    daily_avg = views / video_age
-    velocity_used = velocity if velocity is not None else daily_avg
 
-    # Bounded components, intentionally transparent rather than pretending to predict virality.
+    if prior:
+        try:
+            old = prior[-1]
+            old_date = datetime.date.fromisoformat(old["date"])
+            days_elapsed = max(
+                1 / 24,
+                (datetime.date.fromisoformat(DAY) - old_date).days
+            )
+            velocity = max(
+                0, views - int(old.get("views", 0))
+            ) / days_elapsed
+        except (KeyError, TypeError, ValueError):
+            velocity = None
+
+    daily_average = views / video_age
+    velocity_used = velocity if velocity is not None else daily_average
+
     reach_ratio = views / max(100, subs or 1000)
-    ratio_score = min(30, 30 * (min(10, reach_ratio) / 10))
-    velocity_score = min(25, 25 * (min(50000, velocity_used) / 50000))
+    ratio_score = min(30, 30 * min(10, reach_ratio) / 10)
+    velocity_score = min(25, 25 * min(50000, velocity_used) / 50000)
     newness_score = 20 * max(0, 1 - min(channel_age, 730) / 730)
-    few_videos_score = 15 * max(0, 1 - min(video_count or 1000, 100) / 100)
-    recency_score = 10 * max(0, 1 - min(video_age, WINDOW_DAYS) / WINDOW_DAYS)
-    score = round(ratio_score + velocity_score + newness_score + few_videos_score + recency_score, 1)
+    few_videos_score = 15 * max(
+        0, 1 - min(video_count or 1000, 100) / 100
+    )
+    recency_score = 10 * max(
+        0, 1 - min(video_age, WINDOW_DAYS) / WINDOW_DAYS
+    )
+    score = round(
+        ratio_score + velocity_score + newness_score
+        + few_videos_score + recency_score, 1
+    )
 
     signals = []
-    if subs is not None and subs <= SMALL_SUBSCRIBERS: signals.append("canal pequeno")
-    if video_count is not None and video_count <= FEW_VIDEOS: signals.append("poucos vídeos")
-    if reach_ratio >= 3: signals.append("views ≥ 3× inscritos")
-    if video_age <= 7: signals.append("publicado há até 7 dias")
-    if velocity is not None and velocity > 0: signals.append("crescimento observado")
+    if subs is not None and subs <= SMALL_SUBSCRIBERS:
+        signals.append("canal pequeno")
+    if video_count is not None and video_count <= FEW_VIDEOS:
+        signals.append("poucos vídeos")
+    if reach_ratio >= 3:
+        signals.append("views ≥ 3× inscritos")
+    if video_age <= 7:
+        signals.append("publicado há até 7 dias")
+    if velocity is not None and velocity > 0:
+        signals.append("crescimento observado")
+
     return {
-        "score": score, "signals": signals, "views": views, "subscribers": subs,
-        "channelVideoCount": video_count, "channelAgeDays": channel_age,
-        "videoAgeDays": round(video_age, 1), "viewsPerSubscriber": round(reach_ratio, 2),
+        "score": score,
+        "signals": signals,
+        "views": views,
+        "subscribers": subs,
+        "channelVideoCount": video_count,
+        "channelAgeDays": channel_age,
+        "videoAgeDays": round(video_age, 1),
+        "viewsPerSubscriber": round(reach_ratio, 2),
         "viewsPerDayObserved": round(velocity, 1) if velocity is not None else None,
-        "viewsPerDayAverage": round(daily_avg, 1)
+        "viewsPerDayAverage": round(daily_average, 1)
     }
+
 
 def main():
     if not API_KEY:
-        raise SystemExit("Defina YOUTUBE_API_KEY como variável de ambiente.")
+        raise SystemExit("Defina o segredo YOUTUBE_API_KEY no GitHub.")
+
     candidates = read_json(DATA / "tracked.json", {})
     history = read_json(DATA / "history.json", {})
     run_meta = read_json(DATA / "run.json", {})
-    since = (TODAY - datetime.timedelta(days=WINDOW_DAYS)).isoformat(timespec="seconds").replace("+00:00", "Z")
 
-    # Rotate the global language/region combinations daily; 48 searches max.
-    seed = int(TODAY.strftime("%j"))
-    selected = []
-    for i in range(SEARCH_CALLS_MAX):
-        q = QUERIES[(seed * 7 + i * 5) % len(QUERIES)]
-        lang, region = PAIRS[(seed * 3 + i * 7) % len(PAIRS)]
-        selected.append((q, lang, region))
+    run_count = number(run_meta.get("runCount")) or 0
+    pool = build_search_pool()
+
+    # A cada execução, avança 48 posições na lista de combinações.
+    # A rotação só reinicia depois de percorrer todo o conjunto.
+    start = (run_count * SEARCH_CALLS_MAX) % len(pool)
+    selected = [
+        pool[(start + i) % len(pool)]
+        for i in range(min(SEARCH_CALLS_MAX, len(pool)))
+    ]
+
+    since = (
+        TODAY - datetime.timedelta(days=WINDOW_DAYS)
+    ).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     discovered = {}
-    search_errors = []
+    errors = []
     search_count = 0
-    for q, lang, region in selected:
+
+    print(
+        f"Execução {run_count + 1}: {len(selected)} buscas planejadas "
+        f"entre {len(QUERIES)} temas e {len(PAIRS)} combinações "
+        "de idioma/região."
+    )
+
+    for query, lang, region in selected:
         try:
             data = api("search", {
-                "part": "snippet", "type": "video", "q": q,
-                "publishedAfter": since, "order": "viewCount", "maxResults": 50,
-                "regionCode": region, "relevanceLanguage": lang,
+                "part": "snippet",
+                "type": "video",
+                "q": query,
+                "publishedAfter": since,
+                "order": "viewCount",
+                "maxResults": 50,
+                "regionCode": region,
+                "relevanceLanguage": lang,
                 "safeSearch": "moderate"
             })
             search_count += 1
-            for item in data.get("items", []):
-                vid = item.get("id", {}).get("videoId")
-                if not vid: continue
-                discovered[vid] = {
-                    "videoId": vid, "title": item.get("snippet", {}).get("title", ""),
-                    "description": item.get("snippet", {}).get("description", "")[:500],
-                    "channelId": item.get("snippet", {}).get("channelId", ""),
-                    "channelTitle": item.get("snippet", {}).get("channelTitle", ""),
-                    "publishedAt": item.get("snippet", {}).get("publishedAt", ""),
-                    "query": q, "languageHint": lang, "regionHint": region
-                }
-        except Exception as e:
-            search_errors.append(f"{q}/{lang}-{region}: {str(e)[:180]}")
 
-    # Keep previously tracked candidates so that daily snapshots reveal growth.
-    for vid, meta in candidates.items():
-        discovered.setdefault(vid, meta)
+            for item in data.get("items", []):
+                video_id = item.get("id", {}).get("videoId")
+                if not video_id:
+                    continue
+
+                snippet = item.get("snippet", {})
+                discovered[video_id] = {
+                    "videoId": video_id,
+                    "title": snippet.get("title", ""),
+                    "description": snippet.get("description", "")[:500],
+                    "channelId": snippet.get("channelId", ""),
+                    "channelTitle": snippet.get("channelTitle", ""),
+                    "publishedAt": snippet.get("publishedAt", ""),
+                    "query": query,
+                    "languageHint": lang,
+                    "regionHint": region
+                }
+
+        except Exception as exc:
+            errors.append(
+                f"{query}/{lang}-{region}: {str(exc)[:180]}"
+            )
+            if "403" in str(exc):
+                print("Erro de permissão/cota; interrompendo novas buscas.")
+                break
+
+    # Preserva candidatos antigos para comparar visualizações.
+    for video_id, meta in candidates.items():
+        discovered.setdefault(video_id, meta)
 
     video_details = {}
-    for batch in chunks(list(discovered.keys()), 50):
+    video_ids = list(discovered.keys())
+
+    for batch in chunks(video_ids, 50):
         try:
-            data = api("videos", {"part": "snippet,statistics,contentDetails", "id": ",".join(batch), "maxResults": 50})
+            data = api("videos", {
+                "part": "snippet,statistics,contentDetails",
+                "id": ",".join(batch),
+                "maxResults": 50
+            })
             for item in data.get("items", []):
                 video_details[item["id"]] = item
-        except Exception as e:
-            search_errors.append("videos.list: " + str(e)[:180])
+        except Exception as exc:
+            errors.append(f"videos.list: {str(exc)[:180]}")
 
-    channel_ids = list({v.get("snippet", {}).get("channelId") or discovered.get(vid, {}).get("channelId")
-                        for vid, v in video_details.items()})
-    channel_ids = [x for x in channel_ids if x]
+    channel_ids = sorted({
+        item.get("snippet", {}).get("channelId", "")
+        for item in video_details.values()
+        if item.get("snippet", {}).get("channelId")
+    })
+
     channel_details = {}
+
     for batch in chunks(channel_ids, 50):
         try:
-            data = api("channels", {"part": "snippet,statistics", "id": ",".join(batch), "maxResults": 50})
+            data = api("channels", {
+                "part": "snippet,statistics",
+                "id": ",".join(batch),
+                "maxResults": 50
+            })
             for item in data.get("items", []):
                 channel_details[item["id"]] = item
-        except Exception as e:
-            search_errors.append("channels.list: " + str(e)[:180])
+        except Exception as exc:
+            errors.append(f"channels.list: {str(exc)[:180]}")
 
     results = []
     next_tracked = {}
-    for vid, v in video_details.items():
-        sn = v.get("snippet", {})
-        st = v.get("statistics", {})
-        ch_id = sn.get("channelId", "")
-        ch = channel_details.get(ch_id, {})
-        cs = ch.get("statistics", {})
-        c_sn = ch.get("snippet", {})
-        meta = discovered.get(vid, {})
-        vinfo = {
-            "id": vid, "title": sn.get("title", meta.get("title", "")),
-            "description": sn.get("description", meta.get("description", ""))[:500],
-            "publishedAt": sn.get("publishedAt", meta.get("publishedAt", "")),
-            "defaultAudioLanguage": sn.get("defaultAudioLanguage") or sn.get("defaultLanguage") or meta.get("languageHint"),
-            "duration": v.get("contentDetails", {}).get("duration"),
-            "viewCount": st.get("viewCount", 0)
+
+    for video_id, item in video_details.items():
+        snippet = item.get("snippet", {})
+        stats = item.get("statistics", {})
+        channel_id = snippet.get("channelId", "")
+        channel = channel_details.get(channel_id, {})
+        channel_stats = channel.get("statistics", {})
+        channel_snippet = channel.get("snippet", {})
+        meta = discovered.get(video_id, {})
+
+        video_info = {
+            "id": video_id,
+            "title": snippet.get("title", meta.get("title", "")),
+            "description": snippet.get(
+                "description", meta.get("description", "")
+            )[:500],
+            "publishedAt": snippet.get(
+                "publishedAt", meta.get("publishedAt", "")
+            ),
+            "defaultAudioLanguage": (
+                snippet.get("defaultAudioLanguage")
+                or snippet.get("defaultLanguage")
+                or meta.get("languageHint")
+            ),
+            "duration": item.get("contentDetails", {}).get("duration"),
+            "viewCount": stats.get("viewCount", 0)
         }
-        cinfo = {
-            "id": ch_id, "title": c_sn.get("title", meta.get("channelTitle", "")),
-            "publishedAt": c_sn.get("publishedAt", ""),
-            "subscriberCount": cs.get("subscriberCount"),
-            "videoCount": cs.get("videoCount")
+
+        channel_info = {
+            "id": channel_id,
+            "title": channel_snippet.get(
+                "title", meta.get("channelTitle", "")
+            ),
+            "publishedAt": channel_snippet.get("publishedAt", ""),
+            "subscriberCount": channel_stats.get("subscriberCount"),
+            "videoCount": channel_stats.get("videoCount")
         }
-        prev = history.get(vid, [])
-        metrics = score_candidate(vinfo, cinfo, history)
+
+        metrics = score_candidate(video_info, channel_info, history)
+
         row = {
-            "videoId": vid, "videoUrl": f"https://www.youtube.com/watch?v={vid}",
-            "title": vinfo["title"], "description": vinfo["description"],
-            "publishedAt": vinfo["publishedAt"], "duration": vinfo["duration"],
-            "language": vinfo["defaultAudioLanguage"],
-            "channelId": ch_id, "channelTitle": cinfo["title"],
-            "channelUrl": f"https://www.youtube.com/channel/{ch_id}" if ch_id else "",
-            "channelCreatedAt": cinfo["publishedAt"],
-            "thumbnail": sn.get("thumbnails", {}).get("medium", {}).get("url") or sn.get("thumbnails", {}).get("default", {}).get("url"),
-            "query": meta.get("query"), "languageHint": meta.get("languageHint"), "regionHint": meta.get("regionHint"),
+            "videoId": video_id,
+            "videoUrl": f"https://www.youtube.com/watch?v={video_id}",
+            "title": video_info["title"],
+            "description": video_info["description"],
+            "publishedAt": video_info["publishedAt"],
+            "duration": video_info["duration"],
+            "language": video_info["defaultAudioLanguage"],
+            "channelId": channel_id,
+            "channelTitle": channel_info["title"],
+            "channelUrl": (
+                f"https://www.youtube.com/channel/{channel_id}"
+                if channel_id else ""
+            ),
+            "channelCreatedAt": channel_info["publishedAt"],
+            "thumbnail": (
+                snippet.get("thumbnails", {}).get("medium", {}).get("url")
+                or snippet.get("thumbnails", {}).get("default", {}).get("url")
+            ),
+            "query": meta.get("query"),
+            "languageHint": meta.get("languageHint"),
+            "regionHint": meta.get("regionHint"),
             **metrics
         }
         results.append(row)
-        snap = {"date": DAY, "views": metrics["views"], "subscribers": metrics["subscribers"]}
-        new_hist = (prev + [snap])[-30:]
-        history[vid] = new_hist
-        next_tracked[vid] = {
-            "videoId": vid, "title": row["title"], "description": row["description"],
-            "channelId": ch_id, "channelTitle": row["channelTitle"], "publishedAt": row["publishedAt"],
-            "query": meta.get("query"), "languageHint": meta.get("languageHint"), "regionHint": meta.get("regionHint")
+
+        snapshots = history.get(video_id, [])
+        snapshots.append({
+            "date": DAY,
+            "views": metrics["views"],
+            "subscribers": metrics["subscribers"]
+        })
+
+        # Evita adicionar várias amostras iguais na mesma data.
+        unique_dates = {}
+        for snapshot in snapshots:
+            unique_dates[snapshot.get("date", "")] = snapshot
+        history[video_id] = list(unique_dates.values())[-30:]
+
+        next_tracked[video_id] = {
+            "videoId": video_id,
+            "title": row["title"],
+            "description": row["description"],
+            "channelId": channel_id,
+            "channelTitle": row["channelTitle"],
+            "publishedAt": row["publishedAt"],
+            "query": meta.get("query"),
+            "languageHint": meta.get("languageHint"),
+            "regionHint": meta.get("regionHint")
         }
 
-    results.sort(key=lambda x: x["score"], reverse=True)
-    # Retain a bounded candidate set; prefer highest-scoring candidates for next day's tracking.
-    next_tracked = {r["videoId"]: next_tracked[r["videoId"]] for r in results[:TRACKED_MAX] if r["videoId"] in next_tracked}
-    # Retain only snapshots for tracked videos and no more than 30 days of history.
+    results.sort(key=lambda row: row["score"], reverse=True)
+
+    next_tracked = {
+        row["videoId"]: next_tracked[row["videoId"]]
+        for row in results[:TRACKED_MAX]
+        if row["videoId"] in next_tracked
+    }
+
     cutoff = TODAY.date() - datetime.timedelta(days=30)
     pruned_history = {}
-    for tracked_id in next_tracked:
-        snaps = history.get(tracked_id, [])
+
+    for video_id in next_tracked:
         keep = []
-        for snap_item in snaps:
+        for snapshot in history.get(video_id, []):
             try:
-                if datetime.date.fromisoformat(snap_item.get("date", "")) >= cutoff:
-                    keep.append(snap_item)
-            except Exception:
+                snapshot_date = datetime.date.fromisoformat(
+                    snapshot.get("date", "")
+                )
+                if snapshot_date >= cutoff:
+                    keep.append(snapshot)
+            except (TypeError, ValueError):
                 continue
+
         if keep:
-            pruned_history[tracked_id] = keep[-30:]
+            pruned_history[video_id] = keep[-30:]
+
     write_json(DATA / "tracked.json", next_tracked)
     write_json(DATA / "history.json", pruned_history)
     write_json(DATA / "results.json", {
-        "generatedAt": TODAY.isoformat(), "date": DAY, "searchCalls": search_count,
-        "searchCallsPlanned": SEARCH_CALLS_MAX, "candidateCount": len(results),
-        "errors": search_errors[:20], "results": results[:500]
+        "generatedAt": TODAY.isoformat(),
+        "date": DAY,
+        "searchCalls": search_count,
+        "searchCallsPlanned": SEARCH_CALLS_MAX,
+        "candidateCount": len(results),
+        "errors": errors[:20],
+        "results": results[:RESULTS_MAX]
     })
-    write_json(DATA / "run.json", {"date": DAY, "lastSearchCalls": search_count})
-    print(f"Concluído: {search_count} buscas, {len(results)} vídeos processados, {len(search_errors)} avisos.")
+    write_json(DATA / "run.json", {
+        "date": DAY,
+        "lastSearchCalls": search_count,
+        "runCount": run_count + 1
+    })
+
+    print(
+        f"Concluído: {search_count} buscas, "
+        f"{len(results)} vídeos processados, {len(errors)} avisos."
+    )
+
 
 if __name__ == "__main__":
     main()
