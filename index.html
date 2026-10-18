@@ -326,7 +326,7 @@ async function load() {
 
     all = data.results.filter(item => item && typeof item === 'object');
     hasLoadedData = true;
-    $('total').textContent = fmt(data.candidateCount ?? all.length);
+    $('total').textContent = fmt(all.length);
     $('small').textContent = fmt(all.filter(item => item.subscribers != null && Number(item.subscribers) <= 50000).length);
     $('fresh').textContent = fmt(all.filter(item => {
       const age = days(item.publishedAt);
