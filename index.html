@@ -584,21 +584,31 @@ function render() {
 
     return `<article class="card">
       ${thumbnailHtml}
-      <div cla| n === '' || !Number.isFinite(Number(n))) {
+      <div class="card-body">
+        <div class="score-row"><span class="score">${fmt(item.score)} pontos</span><span class="date">${esc(item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('pt-BR') : 'Data indisponível')}</span></div>
+        <h2>${titleHtml}</h2>
+        <p class="channel">${channelHtml}</p>
+        <div class="chips">${badges}</div>
+        <div class="metrics">
+          <span><strong>${fmt(item.views)}</strong> visualizações</span>
+          <span><strong>${subscribers}</strong></span>
+          <span>${esc(velocity)}</span>
+          <span>${esc(item.duration || 'Duração indisponível')}</span>
+        </div>
+        <p class="description">${esc(item.description || 'Sem descrição disponível.')}</p>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+const fmt = n => {
+  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) {
     return 'N/D';
   }
   return Intl.NumberFormat('pt-BR', {
     notation: Number(n) >= 10000 ? 'compact' : 'standard',
     maximumFractionDigits: 1
   }).format(Number(n));
-};
-
-const days = date => {
-  if (!date) return null;
-  const timestamp = Date.parse(date);
-  if (!Number.isFinite(timestamp)) return null;
-  const age = (Date.now() - timestamp) / 86400000;
-  return Number.isFinite(age) ? Math.max(0, age) : null;
 };
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
