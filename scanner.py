@@ -3,6 +3,7 @@ import os
 import json
 import time
 import datetime
+import re
 from pathlib import Path
 
 import requests
@@ -111,7 +112,7 @@ QUERIES = [
     "destinos escondidos", "kulturelle Unterschiede",
 
     # Formatos e públicos diversos
-    "short documentaries", "video essays", "educational shorts",
+    "long-form documentaries", "video essays", "in-depth video essays",
     "satisfying videos", "restoration projects",
     "craftsmanship", "survival skills", "incredible inventions",
     "comedy sketches", "pranks and reactions",
@@ -428,6 +429,23 @@ def build_search_pool():
     ]
 
 
+def duration_seconds(value):
+    """Converte duração ISO 8601 da API do YouTube para segundos."""
+    match = re.fullmatch(
+        r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?",
+        str(value or "")
+    )
+    if not match:
+        return 0
+    hours, minutes, seconds = (int(part or 0) for part in match.groups())
+    return hours * 3600 + minutes * 60 + seconds
+
+
+# Shorts podem ter até 3 minutos; a API não informa proporção 16:9.
+# Mantemos apenas vídeos com mais de 180 segundos como filtro conservador.
+MIN_LONG_FORM_SECONDS = 181
+
+
 def score_candidate(video, channel, history):
     views = number(video.get("viewCount")) or 0
     subs = number(channel.get("subscriberCount"))
@@ -642,6 +660,10 @@ def main():
     next_tracked = {}
 
     for video_id, item in video_details.items():
+        duration = item.get("contentDetails", {}).get("duration")
+        if duration_seconds(duration) < MIN_LONG_FORM_SECONDS:
+            continue
+
         snippet = item.get("snippet", {})
         stats = item.get("statistics", {})
         channel_id = snippet.get("channelId", "")
