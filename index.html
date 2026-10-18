@@ -601,23 +601,7 @@ function render() {
   }).join('');
 }
 
-const fmt = n => {
-  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) {
-    return 'N/D';
-  }
-  return Intl.NumberFormat('pt-BR', {
-    notation: Number(n) >= 10000 ? 'compact' : 'standard',
-    maximumFractionDigits: 1
-  }).format(Number(n));
-};
 
-const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-  '&':'&amp;',
-  '<':'&lt;',
-  '>':'&gt;',
-  '"':'&quot;',
-  "'":'&#39;'
-}[char]));
 
 function safeUrl(value) {
   try {
