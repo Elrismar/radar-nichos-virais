@@ -46,7 +46,7 @@ jobs:
           if "\nload();" not in script:
               raise SystemExit("Não foi possível localizar a inicialização do painel.")
           script = script.rsplit("\nload();", 1)[0]
-          script = """globalThis.document = { getElementById: () => ({ addEventListener() {} }) };\n""" + script
+          script = "globalThis.document = { getElementById: () => ({ addEventListener() {} }) };" + chr(10) + script
           script += """
           if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
           if (!matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Busca com erro de digitação falhou");
