@@ -49,7 +49,10 @@ jobs:
           script = "globalThis.document = { getElementById: () => ({ addEventListener() {} }) };" + chr(10) + script
           script += """
           if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
-          if (!matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Busca com erro de digitação falhou");
+          if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula 1")) throw new Error("Busca por expressão falhou");
+          if (matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Erro de digitação não deve corresponder");
+          if (matchesSearch("Futebol brasileiro", "fut")) throw new Error("Fragmento de palavra não deve corresponder");
+          if (!matchesSearch("Documentário sobre futebol", "futebol")) throw new Error("Palavra completa falhou");
           if (matchesSearch("Uma festa no canal", "art")) throw new Error("Busca curta gerou falso positivo");
           if (durationSeconds("PT3M") !== 180) throw new Error("Duração de Shorts não reconhecida");
           if (durationSeconds("PT1H2M3S") !== 3723) throw new Error("Duração longa incorreta");
