@@ -1,9 +1,7 @@
 
-name: Radar de Nichos Virais - Coleta diária e manual
+name: Radar de Nichos Virais - Pesquisa manual
 
 on:
-  schedule:
-    - cron: '17 11 * * *'
   workflow_dispatch:
     inputs:
       search_query:
@@ -21,7 +19,7 @@ concurrency:
 
 jobs:
   scan:
-    name: Executar pesquisa manual
+    name: Executar varredura manual
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
