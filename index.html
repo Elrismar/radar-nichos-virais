@@ -111,7 +111,7 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
   </div>
 
   <section class="stats" aria-label="Resumo dos resultados">
-    <div class="stat"><b id="total">—</b><span>Vídeos registrados na coleta</span></div>
+    <div class="stat"><b id="total">—</b><span>Vídeos carregados para filtros</span></div>
     <div class="stat"><b id="small">—</b><span>Canais com até 50 mil inscritos</span></div>
     <div class="stat"><b id="fresh">—</b><span>Publicados nos últimos 7 dias</span></div>
     <div class="stat"><b id="updated">—</b><span>Data da última coleta</span></div>
@@ -220,6 +220,7 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
       <button class="btn secondary" id="reset" type="button">Limpar filtros</button>
       <button class="btn secondary" id="csv" type="button">Exportar CSV</button>
       <button class="btn secondary" id="reload" type="button">Recarregar dados</button>
+      <button class="btn secondary" id="youtubeSearch" type="button">Pesquisar no YouTube</button>
     </div>
   </section>
 
@@ -344,6 +345,52 @@ function matchesSearch(text, query) {
   });
 }
 
+function normalizeText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\\u0300-\\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let previous = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+function matchesSearch(text, query) {
+  const normalizedText = normalizeText(text);
+  const normalizedQuery = normalizeText(query);
+  if (!normalizedQuery) return true;
+  if (normalizedText.includes(normalizedQuery)) return true;
+  const words = normalizedText.split(/\\s+/).filter(Boolean);
+  const queryWords = normalizedQuery.split(/\\s+/).filter(Boolean);
+  return queryWords.every(queryWord => {
+    if (normalizedText.includes(queryWord)) return true;
+    const tolerance = queryWord.length >= 8 ? 2 : queryWord.length >= 5 ? 1 : 0;
+    if (!tolerance) return false;
+    return words.some(word =>
+      Math.abs(word.length - queryWord.length) <= tolerance &&
+      editDistance(word, queryWord) <= tolerance
+    );
+  });
+}
+
 function displayError(message) {
   $('results').innerHTML =
     `<div class="empty error">${esc(message)}<br><br>
@@ -380,7 +427,7 @@ async function load() {
     all = data.results.filter(item => item && typeof item === 'object');
     hasLoadedData = true;
 
-    $('total').textContent = fmt(data.candidateCount ?? all.length);
+    $('total').textContent = fmt(all.length);
 
     $('small').textContent = fmt(
       all.filter(item =>
@@ -699,7 +746,7 @@ async function load() {
 }
 
 function filter() {
-  const query = $('q').value.trim().toLocaleLowerCase('pt-BR');
+  const query = $('q').value.trim();
   const language = $('lang').value.toLowerCase();
   const maxSubs = Number($('subs').value);
   const maxVideos = Number($('videos').value);
@@ -714,10 +761,12 @@ function filter() {
       item.description,
       item.query,
       item.niche,
-      item.topic
-    ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR');
+      item.topic,
+      ...(Array.isArray(item.tags) ? item.tags : []),
+      ...(Array.isArray(item.signals) ? item.signals : [])
+    ].filter(Boolean).join(' ');
 
-    if (query && !searchable.includes(query)) return false;
+    if (query && !matchesSearch(searchable, query)) return false;
 
     const itemLanguage = String(item.language || item.languageHint || '').toLowerCase();
     if (language && !itemLanguage.startsWith(language)) return false;
@@ -865,6 +914,16 @@ function resetFilters() {
 }
 
 $('apply').addEventListener('click', filter);
+$('youtubeSearch').addEventListener('click', () => {
+  const query = $('q').value.trim();
+  if (!query) {
+    $('count').textContent = 'Digite um tema para pesquisar no YouTube.';
+    $('q').focus();
+    return;
+  }
+  const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+  window.open(url, '_blank', 'noopener,noreferrer');
+});
 $('reset').addEventListener('click', resetFilters);
 $('csv').addEventListener('click', exportCsv);
 $('reload').addEventListener('click', load);
