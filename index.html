@@ -123,7 +123,7 @@ footer{padding:20px 0;color:var(--muted);font-size:12px}
       <input id="q" type="search"
         placeholder="Ex.: Fórmula 1, terror, beleza, histórias, games..."
         autocomplete="off">
-      <span class="small">Aceita diferenças de acentos e pequenos erros de digitação.</span>
+      <span class="small">Ignora acentos, mas exige palavras completas e corretamente escritas.</span>
     </div>
 
     <div class="field">
@@ -333,22 +333,11 @@ function matchesSearch(text, query) {
   const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) return true;
 
-  const textWords = normalizedText.split(/\s+/).filter(Boolean);
-  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
-  if (queryWords.length > 1 && normalizedText.includes(normalizedQuery)) return true;
-
-  return queryWords.every(queryWord => {
-    if (textWords.some(word =>
-      word === queryWord || (queryWord.length >= 4 && word.includes(queryWord))
-    )) return true;
-
-    const tolerance = queryWord.length >= 8 ? 2 : queryWord.length >= 5 ? 1 : 0;
-    if (!tolerance) return false;
-    return textWords.some(word =>
-      Math.abs(word.length - queryWord.length) <= tolerance &&
-      editDistance(word, queryWord) <= tolerance
-    );
-  });
+  // Busca estrita: cada palavra digitada deve existir como palavra completa.
+  // Mantém a tolerância a acentos, mas não aceita fragmentos ou erros de digitação.
+  const textWords = new Set(normalizedText.split(/\\s+/).filter(Boolean));
+  const queryWords = normalizedQuery.split(/\\s+/).filter(Boolean);
+  return queryWords.every(queryWord => textWords.has(queryWord));
 }
 
 function displayError(message) {
@@ -530,7 +519,7 @@ function render() {
       : 'https://www.youtube.com/';
 
     const explanation = query
-      ? 'Nenhum vídeo da coleta correspondeu a essa busca. Isso não significa que o assunto não exista no YouTube.'
+      ? 'Nenhum vídeo já coletado corresponde exatamente às palavras completas digitadas. A busca do painel não consulta o YouTube ao vivo; para procurar um tema novo, inicie uma coleta direcionada no GitHub Actions.'
       : 'Nenhum vídeo corresponde aos filtros atuais. Tente ampliar os filtros.';
 
     $('results').innerHTML =
@@ -541,7 +530,7 @@ function render() {
         <p><a href="${esc(youtubeUrl)}" target="_blank" rel="noopener noreferrer">
           ${query ? 'Pesquisar este tema no YouTube' : 'Abrir o YouTube'}
         </a></p>
-        <p class="small">Para que novos vídeos apareçam dentro do Radar, é necessário executar uma nova coleta pelo GitHub Actions.</p>
+        <p class="small">Para coletar esse tema, abra a pesquisa manual no GitHub Actions e informe a palavra ou expressão no campo search_query.</p>
       </div>`;
 
     return;
