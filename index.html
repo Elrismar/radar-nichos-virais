@@ -249,30 +249,23 @@ let hasLoadedData = false;
 
 const $ = id => document.getElementById(id);
 
-const fmt = n => {
-  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) {
-    return 'N/D';
-  }
+const fmt = value => {
+  if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) return 'N/D';
   return Intl.NumberFormat('pt-BR', {
-    notation: Number(n) >= 10000 ? 'compact' : 'standard',
+    notation: Number(value) >= 10000 ? 'compact' : 'standard',
     maximumFractionDigits: 1
-  }).format(Number(n));
+  }).format(Number(value));
 };
 
 const days = date => {
   if (!date) return null;
   const timestamp = Date.parse(date);
   if (!Number.isFinite(timestamp)) return null;
-  const age = (Date.now() - timestamp) / 86400000;
-  return Number.isFinite(age) ? Math.max(0, age) : null;
+  return Math.max(0, (Date.now() - timestamp) / 86400000);
 };
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-  '&':'&amp;',
-  '<':'&lt;',
-  '>':'&gt;',
-  '"':'&quot;',
-  "'":'&#39;'
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
 }[char]));
 
 function safeUrl(value) {
@@ -296,55 +289,21 @@ function normalizeText(value) {
 function durationSeconds(value) {
   const match = String(value || '').match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
   if (!match) return 0;
-  return Number(match[1] || 0) * 3600 +
-         Number(match[2] || 0) * 60 +
-         Number(match[3] || 0);
-}
-
-function editDistance(a, b) {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-
-  let previous = Array.from(
-    {length: b.length + 1},
-    (_, i) => i
-  );
-
-  for (let i = 1; i <= a.length; i++) {
-    const current = [i];
-
-    for (let j = 1; j <= b.length; j++) {
-      current[j] = Math.min(
-        current[j - 1] + 1,
-        previous[j] + 1,
-        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-    }
-
-    previous = current;
-  }
-
-  return previous[b.length];
+  return Number(match[1] || 0) * 3600 + Number(match[2] || 0) * 60 + Number(match[3] || 0);
 }
 
 function matchesSearch(text, query) {
   const normalizedText = normalizeText(text);
   const normalizedQuery = normalizeText(query);
   if (!normalizedQuery) return true;
-
-  // Busca estrita: cada palavra digitada deve existir como palavra completa.
-  // Mantém a tolerância a acentos, mas não aceita fragmentos ou erros de digitação.
   const textWords = new Set(normalizedText.split(/\s+/).filter(Boolean));
   const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
-  return queryWords.every(queryWord => textWords.has(queryWord));
+  return queryWords.every(word => textWords.has(word));
 }
 
 function displayError(message) {
-  $('results').innerHTML =
-    `<div class="empty error">${esc(message)}<br><br>
-    Confira se o arquivo <code>data/results.json</code> existe e se a última
-    execução manual do GitHub Actions terminou sem erros.</div>`;
+  $('results').innerHTML = '<div class="empty error">' + esc(message) +
+    '<br><br>Confira se data/results.json existe e se a última coleta do GitHub Actions terminou sem erros.</div>';
   $('count').textContent = 'Não foi possível carregar os resultados';
   $('quota').textContent = '';
 }
@@ -353,338 +312,41 @@ async function load() {
   const reloadButton = $('reload');
   reloadButton.disabled = true;
   $('count').textContent = 'Carregando dados da última coleta…';
-
   try {
-    const response = await fetch('./data/results.json?ts=' + Date.now(), {
-      cache: 'no-store'
-    });
-
+    const response = await fetch('./data/results.json?ts=' + Date.now(), {cache:'no-store'});
     if (!response.ok) {
-      throw new Error(
-        response.status === 404
-          ? 'O arquivo de resultados ainda não existe.'
-          : `Falha ao carregar os dados (HTTP ${response.status}).`
-      );
+      throw new Error(response.status === 404
+        ? 'O arquivo de resultados ainda não existe.'
+        : 'Falha ao carregar os dados (HTTP ' + response.status + ').');
     }
-
     const data = await response.json();
-
     if (!data || !Array.isArray(data.results)) {
-      throw new Error('O arquivo results.json não contém uma lista válida de resultados.');
+      throw new Error('results.json não contém uma lista válida de resultados.');
     }
 
     all = data.results.filter(item => item && typeof item === 'object');
     hasLoadedData = true;
-
-    $('total').textContent = fmt(all.length);
-
-    $('small').textContent = fmt(
-      all.filter(item =>
-        item.subscribers != null && Number(item.subscribers) <= 50000
-      ).length
-    );
-
-    $('fresh').textContent = fmt(
-      all.filter(item => {
-        const age = days(item.publishedAt);
-        return age !== null && age <= 7;
-      }).length
-    );
-
-    const generated = data.generatedAt ? new Date(data.generatedAt) : null;
-    $('updated').textContent =
-      generated && Number.isFinite(generated.getTime())
-        ? generated.toLocaleString('pt-BR')
-        : 'Data indisponível';
-
-    const errorCount = Array.isArray(data.errors) ? data.errors.length : 0;
-    const actualCalls = data.searchCalls ?? 'N/D';
-    const plannedCalls = data.searchCallsPlanned ?? 'N/D';
-
-    $('quota').textContent =
-      `Buscas nesta coleta: ${actualCalls}/${plannedCalls}` +
-      (errorCount ? ` · Avisos: ${errorCount}` : '');
-
-    filter();
-  } catch (error) {
-    all = [];
-    shown = [];
-    hasLoadedData = false;
-    $('total').textContent = '—';
-    $('small').textContent = '—';
-    $('fresh').textContent = '—';
-    $('updated').textContent = '—';
-
-    displayError(
-      error instanceof SyntaxError
-        ? 'O arquivo de resultados contém JSON inválido.'
-        : (error.message || 'Ocorreu um erro inesperado ao carregar os dados.')
-    );
-  } finally {
-    reloadButton.disabled = false;
-  }
-}
-
-function filter() {
-  const query = $('q').value.trim();
-  const language = $('lang').value.toLowerCase();
-  const maxSubs = Number($('subs').value);
-  const maxVideos = Number($('videos').value);
-  const maxAge = Number($('age').value);
-  const minScore = Number($('minscore').value);
-
-  shown = all.filter(item => {
-    // Prioriza vídeos longos: exclui até 3 minutos, faixa dos Shorts do YouTube.
-    if (durationSeconds(item.duration) <= 180) return false;
-    const age = days(item.publishedAt);
-
-    const searchable = [
-      item.title,
-      item.channelTitle,
-      item.description,
-      item.query,
-      item.niche,
-      item.topic,
-      ...(Array.isArray(item.tags) ? item.tags : []),
-      ...(Array.isArray(item.signals) ? item.signals : [])
-    ].filter(Boolean).join(' ');
-
-    if (query && !matchesSearch(searchable, query)) return false;
-
-    const itemLanguage = String(
-      item.language || item.languageHint || ''
-    ).toLowerCase();
-
-    if (language && !itemLanguage.startsWith(language)) return false;
-
-    if (maxSubs && item.subscribers != null &&
-        Number(item.subscribers) > maxSubs) return false;
-
-    if (maxVideos && item.channelVideoCount != null &&
-        Number(item.channelVideoCount) > maxVideos) return false;
-
-    if (maxAge && age !== null && age > maxAge) return false;
-
-    if (Number(item.score || 0) < minScore) return false;
-
-    return true;
-  });
-
-  const sort = $('sort').value;
-  const number = value =>
-    Number.isFinite(Number(value)) ? Number(value) : 0;
-
-  const timestamp = value => {
-    const result = Date.parse(value || '');
-    return Number.isFinite(result) ? result : 0;
-  };
-
-  shown.sort((a, b) => {
-    if (sort === 'views') return number(b.views) - number(a.views);
-
-    if (sort === 'ratio') {
-      return number(b.viewsPerSubscriber) -
-             number(a.viewsPerSubscriber);
-    }
-
-    if (sort === 'velocity') {
-      return number(b.viewsPerDayObserved ?? b.viewsPerDayAverage) -
-             number(a.viewsPerDayObserved ?? a.viewsPerDayAverage);
-    }
-
-    if (sort === 'recent') {
-      return timestamp(b.publishedAt) - timestamp(a.publishedAt);
-    }
-
-    return number(b.score) - number(a.score);
-  });
-
-  $('count').textContent =
-    `${fmt(shown.length)} resultado(s) · exibindo até 150 vídeos`;
-
-  render();
-}
-
-function render() {
-  if (!hasLoadedData) return;
-
-  const rows = shown.slice(0, 150);
-
-  if (!rows.length) {
-    const query = $('q').value.trim();
-
-    const youtubeUrl = query
-      ? 'https://www.youtube.com/results?search_query=' +
-        encodeURIComponent(query)
-      : 'https://www.youtube.com/';
-
-    const explanation = query
-      ? 'Nenhum vídeo já coletado corresponde exatamente às palavras completas digitadas. A busca do painel não consulta o YouTube ao vivo; para procurar um tema novo, inicie uma coleta direcionada no GitHub Actions.'
-      : 'Nenhum vídeo corresponde aos filtros atuais. Tente ampliar os filtros.';
-
-    $('results').innerHTML =
-      `<div class="empty">
-        <strong>Não encontramos resultados na base atual.</strong>
-        <p>${esc(explanation)}</p>
-        <p>Você pode pesquisar fora do Radar:</p>
-        <p><a href="${esc(youtubeUrl)}" target="_blank" rel="noopener noreferrer">
-          ${query ? 'Pesquisar este tema no YouTube' : 'Abrir o YouTube'}
-        </a></p>
-        <p class="small">Para coletar esse tema, abra a pesquisa manual no GitHub Actions e informe a palavra ou expressão no campo search_query.</p>
-      </div>`;
-
-    return;
-  }
-
-  $('results').innerHTML = rows.map(item => {
-    const videoUrl = safeUrl(item.videoUrl);
-    const channelUrl = safeUrl(item.channelUrl) || videoUrl;
-    const thumbnail = safeUrl(item.thumbnail);
-
-    const subscribers = item.subscribers == null
-      ? 'inscritos ocultos'
-      : `${fmt(item.subscribers)} inscritos`;
-
-    const badges = (Array.isArray(item.signals) ? item.signals : [])
-      .map(signal => `<span class="chip">${esc(signal)}</span>`)
-      .join('');
-
-    const velocity = item.viewsPerDayObserved != null
-      ? `${fmt(item.viewsPerDayObserved)} views/dia observadas`
-      : item.viewsPerDayAverage != null
-        ? `${fmt(item.viewsPerDayAverage)} views/dia (média)`
-        : 'Velocidade indisponível';
-
-    const thumbnailHtml = thumbnail && videoUrl
-      ? `<a href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">
-           <img class="thumb" loading="lazy" src="${esc(thumbnail)}"
-                alt="Miniatura do vídeo"
-                onerror="this.style.display='none'">
-         </a>`
-      : '<div class="thumb" aria-hidden="true"></div>';
-
-    const titleHtml = videoUrl
-      ? `<a class="title" href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.title || 'Vídeo sem título')}</a>`
-      : `<span class="title">${esc(item.title || 'Vídeo sem título')}</span>`;
-
-    const channelHtml = channelUrl
-      ? `<a href="${esc(channelUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">${esc(item.channelTitle || 'Canal')}</a>`
-      : esc(item.channelTitle || 'Canal');
-
-    return `<article class="card">
-      ${thumbnailHtml}
-      <div class="card-body">
-        <div class="score-row"><span class="score">${fmt(item.score)} pontos</span><span class="date">${esc(item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('pt-BR') : 'Data indisponível')}</span></div>
-        <h2>${titleHtml}</h2>
-        <p class="channel">${channelHtml}</p>
-        <div class="chips">${badges}</div>
-        <div class="metrics">
-          <span><strong>${fmt(item.views)}</strong> visualizações</span>
-          <span><strong>${subscribers}</strong></span>
-          <span>${esc(velocity)}</span>
-          <span>${esc(item.duration || 'Duração indisponível')}</span>
-        </div>
-        <p class="description">${esc(item.description || 'Sem descrição disponível.')}</p>
-      </div>
-    </article>`;
-  }).join('');
-}
-
-
-
-function safeUrl(value) {
-  try {
-    const url = new URL(String(value || ''));
-    return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
-  } catch {
-    return '';
-  }
-}
-
-function displayError(message) {
-  $('results').innerHTML =
-    `<div class="empty error">${esc(message)}<br><br>
-    Confira se o arquivo <code>data/results.json</code> existe e se a última
-    execução manual do GitHub Actions terminou sem erros.</div>`;
-  $('count').textContent = 'Não foi possível carregar os resultados';
-  $('quota').textContent = '';
-}
-
-async function load() {
-  const reloadButton = $('reload');
-  reloadButton.disabled = true;
-  $('count').textContent = 'Carregando dados da última coleta…';
-
-  try {
-    const response = await fetch('./data/results.json?ts=' + Date.now(), {
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        response.status === 404
-          ? 'O arquivo de resultados ainda não existe.'
-          : `Falha ao carregar os dados (HTTP ${response.status}).`
-      );
-    }
-
-    const data = await response.json();
-
-    if (!data || !Array.isArray(data.results)) {
-      throw new Error('O arquivo results.json não contém uma lista válida de resultados.');
-    }
-
-    all = data.results.filter(item => item && typeof item === 'object');
-    hasLoadedData = true;
-
     $('total').textContent = fmt(data.candidateCount ?? all.length);
-    $('small').textContent = fmt(
-      all.filter(item =>
-        item.subscribers != null && Number(item.subscribers) <= 50000
-      ).length
-    );
-    $('fresh').textContent = fmt(
-      all.filter(item => {
-        const age = days(item.publishedAt);
-        return age !== null && age <= 7;
-      }).length
-    );
-
+    $('small').textContent = fmt(all.filter(item => item.subscribers != null && Number(item.subscribers) <= 50000).length);
+    $('fresh').textContent = fmt(all.filter(item => {
+      const age = days(item.publishedAt);
+      return age !== null && age <= 7;
+    }).length);
     const generated = data.generatedAt ? new Date(data.generatedAt) : null;
-    $('updated').textContent =
-      generated && Number.isFinite(generated.getTime())
-        ? generated.toLocaleString('pt-BR')
-        : 'Data indisponível';
-
+    $('updated').textContent = generated && Number.isFinite(generated.getTime())
+      ? generated.toLocaleString('pt-BR') : 'Data indisponível';
     const errorCount = Array.isArray(data.errors) ? data.errors.length : 0;
-    const actualCalls = data.searchCalls ?? 'N/D';
-    const plannedCalls = data.searchCallsPlanned ?? 'N/D';
-
-    $('quota').textContent =
-      `Buscas nesta coleta: ${actualCalls}/${plannedCalls}` +
-      (errorCount ? ` · Avisos: ${errorCount}` : '');
-
-    if (!all.length) {
-      $('results').innerHTML =
-        '<div class="empty">A coleta terminou, mas não há vídeos registrados. ' +
-        'Tente outra pesquisa manual ou confira as consultas e os avisos do coletor.</div>';
-    }
-
+    $('quota').textContent = 'Buscas nesta coleta: ' + (data.searchCalls ?? 'N/D') + '/' +
+      (data.searchCallsPlanned ?? 'N/D') + (errorCount ? ' · Avisos: ' + errorCount : '');
     filter();
   } catch (error) {
     all = [];
     shown = [];
     hasLoadedData = false;
-    $('total').textContent = '—';
-    $('small').textContent = '—';
-    $('fresh').textContent = '—';
-    $('updated').textContent = '—';
-
-    displayError(
-      error instanceof SyntaxError
-        ? 'O arquivo de resultados contém JSON inválido.'
-        : (error.message || 'Ocorreu um erro inesperado ao carregar os dados.')
-    );
+    ['total','small','fresh','updated'].forEach(id => $(id).textContent = '—');
+    displayError(error instanceof SyntaxError
+      ? 'O arquivo de resultados contém JSON inválido.'
+      : (error.message || 'Erro inesperado ao carregar os dados.'));
   } finally {
     reloadButton.disabled = false;
   }
@@ -699,32 +361,23 @@ function filter() {
   const minScore = Number($('minscore').value);
 
   shown = all.filter(item => {
-    const age = days(item.publishedAt);
+    // Mais de 3 minutos é apenas um filtro prático; a API não informa proporção 16:9.
+    if (durationSeconds(item.duration) <= 180) return false;
+
     const searchable = [
-      item.title,
-      item.channelTitle,
-      item.description,
-      item.query,
-      item.niche,
-      item.topic,
+      item.title, item.channelTitle, item.description, item.query, item.niche, item.topic,
       ...(Array.isArray(item.tags) ? item.tags : []),
       ...(Array.isArray(item.signals) ? item.signals : [])
     ].filter(Boolean).join(' ');
-
     if (query && !matchesSearch(searchable, query)) return false;
 
     const itemLanguage = String(item.language || item.languageHint || '').toLowerCase();
     if (language && !itemLanguage.startsWith(language)) return false;
-
-    if (maxSubs && item.subscribers != null &&
-        Number(item.subscribers) > maxSubs) return false;
-
-    if (maxVideos && item.channelVideoCount != null &&
-        Number(item.channelVideoCount) > maxVideos) return false;
-
-    if (maxAge && age !== null && age > maxAge) return false;
+    if (maxSubs && (item.subscribers == null || Number(item.subscribers) > maxSubs)) return false;
+    if (maxVideos && (item.channelVideoCount == null || Number(item.channelVideoCount) > maxVideos)) return false;
+    const age = days(item.publishedAt);
+    if (maxAge && (age === null || age > maxAge)) return false;
     if (Number(item.score || 0) < minScore) return false;
-
     return true;
   });
 
@@ -734,83 +387,65 @@ function filter() {
     const result = Date.parse(value || '');
     return Number.isFinite(result) ? result : 0;
   };
-
   shown.sort((a, b) => {
     if (sort === 'views') return number(b.views) - number(a.views);
-    if (sort === 'ratio') {
-      return number(b.viewsPerSubscriber) - number(a.viewsPerSubscriber);
-    }
-    if (sort === 'velocity') {
-      return number(b.viewsPerDayObserved ?? b.viewsPerDayAverage) -
-             number(a.viewsPerDayObserved ?? a.viewsPerDayAverage);
-    }
+    if (sort === 'ratio') return number(b.viewsPerSubscriber) - number(a.viewsPerSubscriber);
+    if (sort === 'velocity') return number(b.viewsPerDayObserved ?? b.viewsPerDayAverage) - number(a.viewsPerDayObserved ?? a.viewsPerDayAverage);
     if (sort === 'recent') return timestamp(b.publishedAt) - timestamp(a.publishedAt);
     return number(b.score) - number(a.score);
   });
-
-  $('count').textContent =
-    `${fmt(shown.length)} resultado(s) · exibindo até 150 vídeos`;
+  $('count').textContent = fmt(shown.length) + ' resultado(s) · exibindo até 150 vídeos';
   render();
 }
 
 function render() {
   if (!hasLoadedData) return;
-
   const rows = shown.slice(0, 150);
-
   if (!rows.length) {
-    $('results').innerHTML =
-      '<div class="empty">Nenhum vídeo corresponde aos filtros. ' +
-      'Experimente ampliar o período, selecionar todos os idiomas ou reduzir a pontuação mínima.</div>';
+    const query = $('q').value.trim();
+    const youtubeUrl = query
+      ? 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query)
+      : 'https://www.youtube.com/';
+    const message = query
+      ? 'Nenhum vídeo da coleção atual corresponde a todas as palavras completas digitadas. Esta caixa filtra dados já coletados; não inicia uma pesquisa ao vivo no YouTube.'
+      : 'Nenhum vídeo corresponde aos filtros atuais. Tente ampliar os filtros.';
+    $('results').innerHTML = '<div class="empty"><strong>Nenhum resultado na coleção atual.</strong><p>' +
+      esc(message) + '</p><p><a href="' + esc(youtubeUrl) +
+      '" target="_blank" rel="noopener noreferrer">' + (query ? 'Pesquisar este tema no YouTube' : 'Abrir o YouTube') +
+      '</a></p><p class="small">Para adicionar vídeos de um novo tema ao Radar, execute a pesquisa manual no GitHub Actions e preencha search_query.</p></div>';
     return;
   }
 
   $('results').innerHTML = rows.map(item => {
     const videoUrl = safeUrl(item.videoUrl);
-    const channelUrl = safeUrl(item.channelUrl) || videoUrl;
+    const channelUrl = safeUrl(item.channelUrl);
     const thumbnail = safeUrl(item.thumbnail);
-    const subscribers = item.subscribers == null
-      ? 'inscritos ocultos'
-      : `${fmt(item.subscribers)} inscritos`;
-
+    const subscribers = item.subscribers == null ? 'inscritos ocultos' : fmt(item.subscribers) + ' inscritos';
     const badges = (Array.isArray(item.signals) ? item.signals : [])
-      .map(signal => `<span class="chip">${esc(signal)}</span>`)
-      .join('');
-
+      .map(signal => '<span class="chip">' + esc(signal) + '</span>').join('');
     const velocity = item.viewsPerDayObserved != null
-      ? `${fmt(item.viewsPerDayObserved)} views/dia observadas`
+      ? fmt(item.viewsPerDayObserved) + ' views/dia observadas'
       : item.viewsPerDayAverage != null
-        ? `${fmt(item.viewsPerDayAverage)} views/dia (média)`
+        ? fmt(item.viewsPerDayAverage) + ' views/dia (média)'
         : 'Velocidade indisponível';
-
     const thumbnailHtml = thumbnail && videoUrl
-      ? `<a href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">
-           <img class="thumb" loading="lazy" src="${esc(thumbnail)}" alt="Miniatura do vídeo"
-                onerror="this.style.display='none'">
-         </a>`
+      ? '<a href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer"><img class="thumb" loading="lazy" src="' +
+        esc(thumbnail) + '" alt="Miniatura do vídeo" onerror="this.style.display=\'none\'"></a>'
       : '<div class="thumb" aria-hidden="true"></div>';
-
     const titleHtml = videoUrl
-      ? `<a class="title" href="${esc(videoUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.title || 'Vídeo sem título')}</a>`
-      : `<span class="title">${esc(item.title || 'Vídeo sem título')}</span>`;
-
+      ? '<a class="title" href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer">' + esc(item.title || 'Vídeo sem título') + '</a>'
+      : '<span class="title">' + esc(item.title || 'Vídeo sem título') + '</span>';
     const channelHtml = channelUrl
-      ? `<a href="${esc(channelUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">${esc(item.channelTitle || 'Canal')}</a>`
+      ? '<a href="' + esc(channelUrl) + '" target="_blank" rel="noopener noreferrer" style="color:var(--muted)">' + esc(item.channelTitle || 'Canal') + '</a>'
       : esc(item.channelTitle || 'Canal');
-
-    return `<article class="card">
-      ${thumbnailHtml}
-      <div class="body">
-        <div class="line">
-          <span class="score">${Number(item.score || 0).toFixed(0)}<span class="small">/100</span></span>
-          <span class="small">${fmt(item.views)} visualizações</span>
-        </div>
-        ${titleHtml}
-        <div class="meta">${channelHtml} · ${esc(subscribers)} · ${fmt(item.channelVideoCount)} vídeos</div>
-        <div class="small">${esc(velocity)} · ${esc(item.videoAgeDays ?? '?')} dias desde a publicação · ${esc(item.language || item.languageHint || 'idioma N/D')} · ${esc(item.regionHint || 'região N/D')}</div>
-        <div class="chips">${badges}</div>
-      </div>
-    </article>`;
+    return '<article class="card">' + thumbnailHtml + '<div class="body"><div class="line">' +
+      '<span class="score">' + fmt(item.score) + '<span class="small">/100</span></span>' +
+      '<span class="small">' + fmt(item.views) + ' visualizações</span></div>' + titleHtml +
+      '<div class="meta">' + channelHtml + ' · ' + esc(subscribers) + ' · ' + fmt(item.channelVideoCount) + ' vídeos</div>' +
+      '<div class="small">' + esc(velocity) + ' · ' + esc(item.videoAgeDays ?? '?') +
+      ' dias desde a publicação · ' + esc(item.language || item.languageHint || 'idioma N/D') +
+      ' · ' + esc(item.regionHint || 'região N/D') + ' · ' + esc(item.duration || 'duração N/D') + '</div>' +
+      '<div class="chips">' + badges + '</div></div></article>';
   }).join('');
 }
 
@@ -819,41 +454,28 @@ function exportCsv() {
     $('count').textContent = 'Não há resultados filtrados para exportar.';
     return;
   }
-
-  const columns = [
-    'score','title','channelTitle','views','subscribers','channelVideoCount',
-    'viewsPerSubscriber','viewsPerDayObserved','viewsPerDayAverage',
-    'publishedAt','language','regionHint','videoUrl','channelUrl'
-  ];
-
-  const quote = value =>
-    '"' + String(value ?? '').replace(/"/g, '""') + '"';
-
-  const content = [
-    columns.join(','),
-    ...shown.map(row => columns.map(column => quote(row[column])).join(','))
-  ].join('\r\n');
-
-  const blobUrl = URL.createObjectURL(
-    new Blob(['\ufeff' + content], {type:'text/csv;charset=utf-8'})
-  );
+  const columns = ['score','title','channelTitle','views','subscribers','channelVideoCount',
+    'viewsPerSubscriber','viewsPerDayObserved','viewsPerDayAverage','publishedAt','duration',
+    'language','regionHint','videoUrl','channelUrl'];
+  const quote = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+  const content = [columns.join(','), ...shown.map(row => columns.map(column => quote(row[column])).join(','))].join('\r\n');
+  const blobUrl = URL.createObjectURL(new Blob(['\ufeff' + content], {type:'text/csv;charset=utf-8'}));
   const link = document.createElement('a');
   link.href = blobUrl;
   link.download = 'radar-nichos-virais.csv';
   document.body.appendChild(link);
   link.click();
   link.remove();
-
   setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
 
 function resetFilters() {
   $('q').value = '';
   $('lang').value = '';
-  $('subs').value = '50000';
-  $('videos').value = '20';
-  $('age').value = '30';
-  $('minscore').value = '60';
+  $('subs').value = '0';
+  $('videos').value = '0';
+  $('age').value = '0';
+  $('minscore').value = '0';
   $('sort').value = 'score';
   filter();
 }
@@ -866,8 +488,7 @@ $('youtubeSearch').addEventListener('click', () => {
     $('q').focus();
     return;
   }
-  const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), '_blank', 'noopener,noreferrer');
 });
 $('reset').addEventListener('click', resetFilters);
 $('csv').addEventListener('click', exportCsv);
@@ -875,6 +496,12 @@ $('reload').addEventListener('click', load);
 $('q').addEventListener('keydown', event => {
   if (event.key === 'Enter') filter();
 });
+$('lang').addEventListener('change', filter);
+$('subs').addEventListener('change', filter);
+$('videos').addEventListener('change', filter);
+$('age').addEventListener('change', filter);
+$('minscore').addEventListener('change', filter);
+$('sort').addEventListener('change', filter);
 
 load();
 </script>
