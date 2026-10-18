@@ -60,6 +60,7 @@ jobs:
           if (matchesSearch("Uma festa no canal", "art")) throw new Error("Busca curta gerou falso positivo");
           console.log("Testes de busca do painel aprovados.");
           """
+          for n, line in enumerate(script.splitlines()[360:380], 361): print(f"JS {n}: {line}")
           Path("/tmp/radar-inline.js").write_text(script, encoding="utf-8")
           PY
           node --check /tmp/radar-inline.js
