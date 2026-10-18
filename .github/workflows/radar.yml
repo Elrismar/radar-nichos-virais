@@ -1,7 +1,9 @@
 
-name: Radar de Nichos Virais - Pesquisa Manual
+name: Radar de Nichos Virais - Coleta diária e manual
 
 on:
+  schedule:
+    - cron: '17 11 * * *'
   workflow_dispatch:
 
 permissions:
