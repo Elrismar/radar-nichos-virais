@@ -4,6 +4,7 @@ MVP estático + coletor **exclusivamente manual** via GitHub Actions + YouTube D
 
 ## O que faz
 - Explora centenas de termos e subnichos em entretenimento, esportes (incluindo futebol e Fórmula 1), música dark, crime e mistérios, política, negócios, cultura adulta informativa, games, cinema, comportamento, história, ciência e outros segmentos, em vários idiomas.
+- Exclui vídeos com até 3 minutos para evitar Shorts; a YouTube Data API não expõe diretamente a proporção 16:9, então duração longa é um filtro prático, não uma garantia técnica de formato horizontal.
 - Pesquisa vídeos recentes em várias combinações de tema, idioma e país.
 - Encontra canais com poucos inscritos e poucos vídeos, mas com vídeos que têm desempenho desproporcional.
 - Guarda snapshots para estimar crescimento diário após a primeira execução.
