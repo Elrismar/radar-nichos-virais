@@ -322,69 +322,20 @@ function editDistance(a, b) {
 function matchesSearch(text, query) {
   const normalizedText = normalizeText(text);
   const normalizedQuery = normalizeText(query);
-
   if (!normalizedQuery) return true;
-  if (normalizedText.includes(normalizedQuery)) return true;
 
-  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
   const textWords = normalizedText.split(/\s+/).filter(Boolean);
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+  if (queryWords.length > 1 && normalizedText.includes(normalizedQuery)) return true;
 
   return queryWords.every(queryWord => {
-    if (normalizedText.includes(queryWord)) return true;
+    if (textWords.some(word =>
+      word === queryWord || (queryWord.length >= 4 && word.includes(queryWord))
+    )) return true;
 
-    const tolerance = queryWord.length >= 8 ? 2
-      : queryWord.length >= 5 ? 1
-      : 0;
-
-    if (!tolerance) return false;
-
-    return textWords.some(word =>
-      Math.abs(word.length - queryWord.length) <= tolerance &&
-      editDistance(word, queryWord) <= tolerance
-    );
-  });
-}
-
-function normalizeText(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\\u0300-\\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .replace(/[^\\p{L}\\p{N}]+/gu, ' ')
-    .trim();
-}
-
-function editDistance(a, b) {
-  if (a === b) return 0;
-  if (!a.length) return b.length;
-  if (!b.length) return a.length;
-  let previous = Array.from({length: b.length + 1}, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const current = [i];
-    for (let j = 1; j <= b.length; j++) {
-      current[j] = Math.min(
-        current[j - 1] + 1,
-        previous[j] + 1,
-        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-    }
-    previous = current;
-  }
-  return previous[b.length];
-}
-
-function matchesSearch(text, query) {
-  const normalizedText = normalizeText(text);
-  const normalizedQuery = normalizeText(query);
-  if (!normalizedQuery) return true;
-  if (normalizedText.includes(normalizedQuery)) return true;
-  const words = normalizedText.split(/\\s+/).filter(Boolean);
-  const queryWords = normalizedQuery.split(/\\s+/).filter(Boolean);
-  return queryWords.every(queryWord => {
-    if (normalizedText.includes(queryWord)) return true;
     const tolerance = queryWord.length >= 8 ? 2 : queryWord.length >= 5 ? 1 : 0;
     if (!tolerance) return false;
-    return words.some(word =>
+    return textWords.some(word =>
       Math.abs(word.length - queryWord.length) <= tolerance &&
       editDistance(word, queryWord) <= tolerance
     );
