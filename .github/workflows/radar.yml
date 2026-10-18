@@ -5,6 +5,12 @@ on:
   schedule:
     - cron: '17 11 * * *'
   workflow_dispatch:
+    inputs:
+      search_query:
+        description: 'Tema opcional para pesquisar no YouTube'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -34,6 +40,7 @@ jobs:
       - name: Pesquisar nichos e vídeos
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          CUSTOM_QUERY: ${{ inputs.search_query }}
         run: python scanner.py
 
       - name: Salvar resultados
