@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
       - name: Validar sintaxe e dados antes da coleta
         run: |
           python -m py_compile scanner.py
@@ -58,9 +61,6 @@ jobs:
           assert len({region for _, _, region in batch}) > 1, "Lote concentrado em uma região"
           print(f"Validação OK: {len(pool)} combinações únicas; lote diversificado.")
           PY
-
-      - name: Instalar dependências
-        run: pip install -r requirements.txt
 
       - name: Pesquisar nichos e vídeos
         env:
