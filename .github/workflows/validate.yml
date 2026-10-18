@@ -62,7 +62,7 @@ jobs:
           if (durationSeconds("PT1H2M3S") !== 3723) throw new Error("Duração longa incorreta");
           console.log("Testes de busca do painel aprovados.");
           """
-          for n, line in enumerate(script.splitlines()[360:380], 361): print(f"JS {n}: {line}")
+          for n, line in enumerate(script.splitlines()[375:390], 376): print(f"JS {n}: {line!r}")
           Path("/tmp/radar-inline.js").write_text(script, encoding="utf-8")
           PY
           node --check /tmp/radar-inline.js
