@@ -2,7 +2,6 @@
 import os
 import json
 import time
-import hashlib
 import datetime
 from pathlib import Path
 
@@ -209,19 +208,14 @@ def number(value):
 
 
 def build_search_pool():
-    # Ordem estável, distribuída por temas e idiomas.
-    # Permite percorrer as combinações sem repetir cada uma
-    # até completar o ciclo da lista.
-    pool = []
-
-    for query in QUERIES:
-        for lang, region in PAIRS:
-            signature = f"{query}|{lang}|{region}"
-            order = hashlib.sha256(signature.encode("utf-8")).hexdigest()
-            pool.append((order, query, lang, region))
-
-    pool.sort(key=lambda item: item[0])
-    return [(q, lang, region) for _, q, lang, region in pool]
+    # Percorre as regiões em ciclos e distribui os temas dentro de cada
+    # região. Assim, cada lote diário cobre muitos assuntos diferentes,
+    # em vez de gastar a cota com várias regiões do mesmo tema.
+    return [
+        (query, lang, region)
+        for lang, region in PAIRS
+        for query in QUERIES
+    ]
 
 
 def score_candidate(video, channel, history):
@@ -316,7 +310,13 @@ def main():
     history = read_json(DATA / "history.json", {})
     run_meta = read_json(DATA / "run.json", {})
 
-    run_count = number(run_meta.get("runCount")) or 0
+    run_count_value = number(run_meta.get("runCount"))
+    # Migração segura do run.json antigo, que guardava apenas lastSearchCalls.
+    # Como já houve coleta, começamos no segundo lote para evitar repetir
+    # imediatamente a primeira faixa de buscas.
+    run_count = run_count_value if run_count_value is not None else (
+        1 if number(run_meta.get("lastSearchCalls")) else 0
+    )
     pool = build_search_pool()
 
     # A cada execução, avança 48 posições na lista de combinações.
@@ -542,19 +542,24 @@ def main():
 
     write_json(DATA / "tracked.json", next_tracked)
     write_json(DATA / "history.json", pruned_history)
+    # candidateCount corresponde ao número realmente entregue ao painel.
+    # totalCandidates mantém a quantidade processada antes do limite de saída.
     write_json(DATA / "results.json", {
         "generatedAt": TODAY.isoformat(),
         "date": DAY,
         "searchCalls": search_count,
         "searchCallsPlanned": SEARCH_CALLS_MAX,
-        "candidateCount": len(results),
+        "candidateCount": min(len(results), RESULTS_MAX),
+        "totalCandidates": len(results),
+        "trackedCount": len(next_tracked),
         "errors": errors[:20],
         "results": results[:RESULTS_MAX]
     })
     write_json(DATA / "run.json", {
         "date": DAY,
         "lastSearchCalls": search_count,
-        "runCount": run_count + 1
+        "runCount": run_count + 1,
+        "nextSearchOffset": ((run_count + 1) * SEARCH_CALLS_MAX) % len(pool)
     })
 
     print(
