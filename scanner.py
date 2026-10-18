@@ -12,6 +12,7 @@ DATA = ROOT / "data"
 DATA.mkdir(exist_ok=True)
 
 API_KEY = os.environ.get("YOUTUBE_API_KEY", "").strip()
+CUSTOM_QUERY = os.environ.get("CUSTOM_QUERY", "").strip()[:100]
 BASE = "https://www.googleapis.com/youtube/v3"
 TODAY = datetime.datetime.now(datetime.timezone.utc)
 DAY = TODAY.strftime("%Y-%m-%d")
@@ -208,13 +209,13 @@ def number(value):
 
 
 def build_search_pool():
-    # Percorre as regiões em ciclos e distribui os temas dentro de cada
-    # região. Assim, cada lote diário cobre muitos assuntos diferentes,
-    # em vez de gastar a cota com várias regiões do mesmo tema.
+    # Distribui os temas por diferentes regiões em cada lote. A cada ciclo,
+    # a região atribuída a cada tema avança, evitando concentrar uma execução
+    # inteira em um único país.
     return [
-        (query, lang, region)
-        for lang, region in PAIRS
-        for query in QUERIES
+        (query, *PAIRS[(query_index + region_offset) % len(PAIRS)])
+        for region_offset in range(len(PAIRS))
+        for query_index, query in enumerate(QUERIES)
     ]
 
 
@@ -326,6 +327,10 @@ def main():
         pool[(start + i) % len(pool)]
         for i in range(min(SEARCH_CALLS_MAX, len(pool)))
     ]
+    # Uma busca personalizada opcional substitui a primeira busca do lote,
+    # mantendo o limite total de chamadas search.list por execução.
+    if CUSTOM_QUERY and selected:
+        selected[0] = (CUSTOM_QUERY, "en", "US")
 
     since = (
         TODAY - datetime.timedelta(days=WINDOW_DAYS)
