@@ -1,13 +1,14 @@
 # Radar de Nichos Virais — MVP gratuito
 
-MVP estático + coletor diário via GitHub Actions + YouTube Data API v3.
+MVP estático + coletor **exclusivamente manual** via GitHub Actions + YouTube Data API v3.
 
 ## O que faz
+- Explora centenas de termos e subnichos em entretenimento, esportes (incluindo futebol e Fórmula 1), música dark, crime e mistérios, política, negócios, cultura adulta informativa, games, cinema, comportamento, história, ciência e outros segmentos, em vários idiomas.
 - Pesquisa vídeos recentes em várias combinações de tema, idioma e país.
 - Encontra canais com poucos inscritos e poucos vídeos, mas com vídeos que têm desempenho desproporcional.
 - Guarda snapshots para estimar crescimento diário após a primeira execução.
 - Gera `data/results.json`, consumido pelo painel responsivo.
-- Executa diariamente pelo GitHub Actions e também pode ser iniciado manualmente.
+- Só pesquisa quando você inicia manualmente pelo GitHub Actions; não há agendamento diário.
 
 ## Custo
 O código e GitHub Pages / GitHub Actions em repositório público podem ser usados sem pagamento, sujeitos às regras e limites atuais das plataformas. A YouTube Data API tem cotas gratuitas limitadas. Isto não é um serviço de varredura exaustiva de todo o YouTube.
@@ -21,7 +22,7 @@ O código e GitHub Pages / GitHub Actions em repositório público podem ser usa
    - Nome: `YOUTUBE_API_KEY`
    - Valor: sua chave da API.
 6. Abra `Settings → Pages`, escolha `Deploy from a branch`, branch `main`, pasta `/ (root)`, e salve.
-7. Abra `Actions`, habilite workflows se solicitado, e execute `Radar de Nichos Virais - Coleta diária e manual` com `Run workflow` para testar imediatamente. O campo opcional `search_query` permite pesquisar um tema específico em uma execução manual; deixe vazio para seguir a rotação normal. Depois, a coleta também roda diariamente.
+7. Abra `Actions`, habilite workflows se solicitado, e execute `Radar de Nichos Virais - Pesquisa manual` com `Run workflow`. O campo opcional `search_query` permite pesquisar qualquer tema ou palavra-chave em uma execução manual; se deixar vazio, o coletor percorre a rotação de nichos.
 8. Depois da primeira execução, o painel fica disponível em `https://SEU-USUARIO.github.io/radar-nichos-virais/`.
 
 ## Observações de segurança
@@ -32,7 +33,7 @@ O código e GitHub Pages / GitHub Actions em repositório público podem ser usa
 
 ## Limites e interpretação
 - A cota padrão documentada do YouTube Data API inclui um bucket de 100 chamadas `search.list` por dia e 10.000 unidades/dia para a maioria dos demais métodos; confirme sempre no console porque cotas/políticas podem mudar.
-- O workflow faz até 48 buscas por execução, mantendo margem para chamadas adicionais. A lista de temas e combinações de idioma/região é percorrida em ciclos, distribuindo os temas por várias regiões; os resultados do painel são limitados a 500 vídeos por coleta. O workflow valida a sintaxe do Python e JavaScript, os JSON e os principais casos da busca antes de chamar a API.
+- O workflow faz até 48 buscas por execução, mantendo margem para chamadas adicionais. A lista ampliada de temas e combinações de idioma/região é percorrida em ciclos de até 48 buscas manuais por execução; isso significa que nem todos os subnichos são pesquisados em uma única execução. Os resultados do painel são limitados a 500 vídeos por coleta. O workflow valida a sintaxe do Python e JavaScript, os JSON e os principais casos da busca antes de chamar a API.
 - `relevanceLanguage` e `regionCode` ajudam a diversificar resultados, mas não filtram perfeitamente o idioma falado nem representam todos os vídeos de um país.
 - A API não revela todos os canais ou todos os dados de crescimento. Views por inscritos é um indicador, não prova de viralidade.
 - A primeira execução não conhece crescimento histórico. A velocidade começa a ser estimada depois de snapshots sucessivos.
