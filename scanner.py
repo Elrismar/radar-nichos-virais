@@ -617,6 +617,15 @@ def main():
                 print("Erro de permissão/cota; interrompendo novas buscas.")
                 break
 
+    # Nunca marque uma coleta como recente se nenhuma busca foi bem-sucedida.
+    # Isso evita publicar dados antigos com um timestamp novo quando a API falha.
+    if search_count == 0:
+        details = "; ".join(errors[:3]) or "A API não retornou buscas bem-sucedidas."
+        raise SystemExit(
+            "Coleta interrompida: nenhuma busca ao YouTube foi concluída; "
+            "os resultados anteriores foram preservados. Detalhes: " + details
+        )
+
     # Preserva candidatos antigos para comparar visualizações.
     for video_id, meta in candidates.items():
         discovered.setdefault(video_id, meta)
@@ -635,6 +644,13 @@ def main():
                 video_details[item["id"]] = item
         except Exception as exc:
             errors.append(f"videos.list: {str(exc)[:180]}")
+
+    if video_ids and not video_details:
+        details = "; ".join(errors[-3:]) or "videos.list não retornou detalhes."
+        raise SystemExit(
+            "Coleta interrompida: nenhum detalhe de vídeo foi recuperado; "
+            "os resultados anteriores foram preservados. Detalhes: " + details
+        )
 
     channel_ids = sorted({
         item.get("snippet", {}).get("channelId", "")
