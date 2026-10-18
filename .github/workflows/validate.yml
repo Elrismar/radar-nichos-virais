@@ -1,0 +1,75 @@
+name: Auditoria automatizada do Radar
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scanner.py'
+      - 'index.html'
+      - 'requirements.txt'
+      - 'data/*.json'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validar código e dados sem consumir cota do YouTube
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Validar Python, JSON, rotação e busca do painel
+        run: |
+          python -m py_compile scanner.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          for name in ("data/results.json", "data/history.json", "data/tracked.json", "data/run.json"):
+              path = Path(name)
+              if path.exists():
+                  json.loads(path.read_text(encoding="utf-8"))
+
+          html = Path("index.html").read_text(encoding="utf-8")
+          script = html.split("<script>", 1)[1].split("</script>", 1)[0]
+          if "\\nload();" not in script:
+              raise SystemExit("Não foi possível localizar a inicialização do painel.")
+          script = script.rsplit("\\nload();", 1)[0]
+          script = """globalThis.document = { getElementById: () => ({ addEventListener() {} }) };\\n""" + script
+          script += """
+          if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
+          if (!matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Busca com erro de digitação falhou");
+          if (matchesSearch("Uma festa no canal", "art")) throw new Error("Busca curta gerou falso positivo");
+          console.log("Testes de busca do painel aprovados.");
+          """
+          Path("/tmp/radar-inline.js").write_text(script, encoding="utf-8")
+          PY
+          node --check /tmp/radar-inline.js
+          node /tmp/radar-inline.js
+          python - <<'PY'
+          import scanner
+          pool = scanner.build_search_pool()
+          assert len(pool) == len(set(pool)), "Combinações duplicadas na rotação"
+          batch = pool[:scanner.SEARCH_CALLS_MAX]
+          assert len({query for query, _, _ in batch}) == len(batch), "Lote não cobre temas diversos"
+          assert len({region for _, _, region in batch}) > 1, "Lote concentrado em uma região"
+          print(f"Validação OK: {len(pool)} combinações únicas; lote diversificado.")
+          PY
