@@ -54,9 +54,9 @@ jobs:
           if html.count("async function load()") != 1:
               raise SystemExit("O painel deve conter uma única função load().")
           script = html.split("<script>", 1)[1].split("</script>", 1)[0]
-          if "\\nload();" not in script:
+          if "\nload();" not in script:
               raise SystemExit("Não foi possível localizar a inicialização do painel.")
-          script = script.rsplit("\\nload();", 1)[0]
+          script = script.rsplit("\nload();", 1)[0]
           script = "globalThis.document = { getElementById: () => ({ addEventListener() {} }) };" + chr(10) + script
           script += """
           if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
