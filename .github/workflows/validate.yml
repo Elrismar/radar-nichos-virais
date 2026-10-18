@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    name: Validar código e dados sem consumir cota do YouTube
+    name: Validar código, dados e filtros do painel
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -49,27 +49,33 @@ jobs:
                   json.loads(path.read_text(encoding="utf-8"))
 
           html = Path("index.html").read_text(encoding="utf-8")
+          if html.count("function render()") != 1:
+              raise SystemExit("O painel deve conter uma única função render().")
+          if html.count("async function load()") != 1:
+              raise SystemExit("O painel deve conter uma única função load().")
           script = html.split("<script>", 1)[1].split("</script>", 1)[0]
-          if "\nload();" not in script:
+          if "\\nload();" not in script:
               raise SystemExit("Não foi possível localizar a inicialização do painel.")
-          script = script.rsplit("\nload();", 1)[0]
+          script = script.rsplit("\\nload();", 1)[0]
           script = "globalThis.document = { getElementById: () => ({ addEventListener() {} }) };" + chr(10) + script
           script += """
           if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
+          if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula 1")) throw new Error("Busca por expressão falhou");
           if (matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Busca aceitou erro de digitação");
-if (!matchesSearch("Vídeos de futebol brasileiro", "futebol")) throw new Error("Busca por palavra completa falhou");
-if (matchesSearch("Vídeos de futebol brasileiro", "fut")) throw new Error("Busca aceitou fragmento de palavra");
-if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula 1")) throw new Error("Busca por expressão falhou");
+          if (matchesSearch("Vídeos de futebol brasileiro", "fut")) throw new Error("Busca aceitou fragmento de palavra");
+          if (!matchesSearch("Documentário sobre futebol", "futebol")) throw new Error("Busca por palavra completa falhou");
           if (matchesSearch("Uma festa no canal", "art")) throw new Error("Busca curta gerou falso positivo");
-          if (durationSeconds("PT3M") !== 180) throw new Error("Duração de Shorts não reconhecida");
-          if (durationSeconds("PT1H2M3S") !== 3723) throw new Error("Duração longa incorreta");
-          console.log("Testes de busca do painel aprovados.");
+          if (!matchesSearch("História da Fórmula 1", "historia formula 1")) throw new Error("Busca por várias palavras falhou");
+          if (durationSeconds("PT3M") !== 180) throw new Error("Duração de 3 minutos incorreta");
+          if (durationSeconds("PT3M1S") !== 181) throw new Error("Duração longa incorreta");
+          if (durationSeconds("PT1H2M3S") !== 3723) throw new Error("Duração com horas incorreta");
+          console.log("Testes JavaScript do painel aprovados.");
           """
-          for n, line in enumerate(script.splitlines()[375:390], 376): print(f"JS {n}: {line!r}")
           Path("/tmp/radar-inline.js").write_text(script, encoding="utf-8")
           PY
           node --check /tmp/radar-inline.js
           node /tmp/radar-inline.js
+
           python - <<'PY'
           import scanner
           assert scanner.duration_seconds("PT3M") == 180
@@ -81,5 +87,6 @@ if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula 1")) throw new Erro
           batch = pool[:scanner.SEARCH_CALLS_MAX]
           assert len({query for query, _, _ in batch}) == len(batch), "Lote não cobre temas diversos"
           assert len({region for _, _, region in batch}) > 1, "Lote concentrado em uma região"
-          print(f"Validação OK: {len(pool)} combinações únicas; lote diversificado.")
+          assert scanner.SEARCH_CALLS_MAX <= 100, "Lote excede o limite planejado de buscas"
+          print(f"Validação Python aprovada: {len(pool)} combinações únicas; lote diversificado.")
           PY
