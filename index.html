@@ -335,8 +335,8 @@ function matchesSearch(text, query) {
 
   // Busca estrita: cada palavra digitada deve existir como palavra completa.
   // Mantém a tolerância a acentos, mas não aceita fragmentos ou erros de digitação.
-  const textWords = new Set(normalizedText.split(/\\s+/).filter(Boolean));
-  const queryWords = normalizedQuery.split(/\\s+/).filter(Boolean);
+  const textWords = new Set(normalizedText.split(/\s+/).filter(Boolean));
+  const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
   return queryWords.every(queryWord => textWords.has(queryWord));
 }
 
