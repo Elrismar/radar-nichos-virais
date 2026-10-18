@@ -119,7 +119,216 @@ QUERIES = [
     "animation stories", "stop motion animation",
     "asmr", "podcast clips", "interviews",
     "news commentary", "product comparisons",
-    "tutorial for beginners", "how things are made"
+    "tutorial for beginners", "how things are made",
+
+    # Nichos dark e narrativas sem rosto
+    "dark niche youtube channel", "faceless youtube channel ideas",
+    "dark documentary", "dark stories explained", "disturbing facts explained",
+    "forgotten crimes documentary", "criminal cases explained",
+    "strange disappearances", "mysterious deaths history",
+    "historical scandals explained", "forgotten disasters documentary",
+    "dark side of history", "untold true crime stories",
+    "internet mysteries explained", "lost media documentary",
+    "dark facts about celebrities", "dark side of fame",
+    "forgotten tragedies", "conspiracy theories debunked",
+    "dark psychology stories", "psychological manipulation explained",
+    "real stories that sound fake", "unbelievable true events",
+    "documentary without narration", "faceless storytelling",
+    "dark ambient music", "dark music mix", "dark classical music",
+    "dark piano music", "dark cinematic music", "dark trap music",
+    "dark phonk", "dark synthwave", "gothic music history",
+    "dark music facts", "forgotten musicians", "musicians who disappeared",
+    "music industry scandals", "untold music industry stories",
+    "lost songs mysteries", "songs with dark meanings",
+    "dark songs explained", "music lore explained",
+    "histórias sombrias da música", "músicas com histórias macabras",
+    "música dark sem voz", "mistérios da música",
+
+    # Futebol, clubes, jogadores e histórias pouco conhecidas
+    "football dark stories", "football scandals documentary",
+    "football mysteries explained", "forgotten football players",
+    "football clubs financial collapse", "football rivalries history",
+    "football transfers that failed", "football corruption cases",
+    "football stories nobody knows", "underrated football stories",
+    "soccer business explained", "football tactics explained",
+    "football wonderkids documentary", "football legends forgotten",
+    "historias oscuras del futbol", "escándalos del fútbol",
+    "histórias desconhecidas do futebol", "bastidores do futebol",
+    "casos bizarros do futebol", "jogadores esquecidos futebol",
+    "futebol feminino histórias", "história das torcidas",
+
+    # Fórmula 1, automobilismo e transportes
+    "Formula 1 dark stories", "Formula 1 scandals documentary",
+    "F1 stories nobody knows", "forgotten Formula 1 drivers",
+    "Formula 1 accidents explained", "F1 team failures history",
+    "Formula 1 engineering explained", "F1 rivalries documentary",
+    "Formula 1 business explained", "motorsport unsolved mysteries",
+    "racing legends forgotten", "rally racing stories",
+    "NASCAR dark history", "MotoGP rivalries",
+    "histórias da Fórmula 1", "bastidores da F1",
+    "acidentes históricos da Fórmula 1", "pilotos esquecidos da F1",
+
+    # Outros esportes e competição
+    "sports dark history", "sports scandals documentary",
+    "Olympics controversies explained", "boxing dark stories",
+    "MMA stories nobody knows", "WWE dark stories",
+    "basketball scandals explained", "NBA forgotten players",
+    "tennis scandals documentary", "cycling doping history",
+    "cricket stories explained", "sports business scandals",
+    "underdog sports stories", "athletes who lost everything",
+    "histórias sombrias do esporte", "escândalos esportivos",
+
+    # Crime, investigação, justiça e golpes
+    "cold cases documentary", "forensic science cases",
+    "fraud cases explained", "famous heists documentary",
+    "art theft mysteries", "unsolved art crimes",
+    "financial scams explained", "cult leaders documentary",
+    "organized crime history", "mafia stories documentary",
+    "cybercrime cases explained", "identity theft stories",
+    "courtroom cases explained", "wrongful convictions documentary",
+    "missing treasure mysteries", "historical assassinations explained",
+    "true crime animation", "true crime maps",
+    "casos criminais antigos", "golpes financeiros famosos",
+    "crimes históricos explicados", "mistérios policiais reais",
+
+    # Cultura adulta, prostituição e indústria sexual em contexto informativo
+    "history of prostitution documentary", "sex work history",
+    "prostitution laws around the world", "history of brothels",
+    "adult industry business explained", "adult industry history",
+    "famous scandals adult industry", "human trafficking awareness",
+    "sex work policy debate", "história da prostituição",
+    "prostituição na história", "legislação sobre trabalho sexual",
+    "historia de la prostitución", "historia del trabajo sexual",
+
+    # Celebridades, fama, internet e mídia
+    "celebrity downfall documentary", "celebrity scandals explained",
+    "influencer scandals documentary", "internet fame dark side",
+    "youtuber rise and fall", "streamer controversies explained",
+    "failed reality tv stars", "forgotten child stars",
+    "celebrity feuds history", "cancelled celebrities explained",
+    "viral trends that disappeared", "internet culture documentary",
+    "histórias de influenciadores", "famosos que desapareceram",
+
+    # Política, geopolítica e poder
+    "political scandals documentary", "forgotten political events",
+    "political propaganda explained", "dictators rise and fall",
+    "political corruption cases", "geopolitical conflicts explained",
+    "election controversies history", "intelligence agency history",
+    "political leaders biographies", "government secrets declassified",
+    "histórias políticas desconhecidas", "escândalos políticos históricos",
+
+    # Economia, empresas, marcas e trabalho
+    "company collapse documentary", "business failures explained",
+    "brands that disappeared", "corporate scandals documentary",
+    "marketing disasters history", "failed products documentary",
+    "luxury industry secrets", "retail business dark side",
+    "gig economy explained", "unusual jobs documentary",
+    "workplace scandals history", "companies that went bankrupt",
+    "empresas que faliram histórias", "marcas que desapareceram",
+
+    # Relacionamentos, família e comportamento social
+    "relationship psychology explained", "marriage customs around the world",
+    "dating culture explained", "social experiments documentary",
+    "family secrets true stories", "friendship psychology",
+    "modern loneliness explained", "unusual communities documentary",
+    "cult psychology explained", "social norms around the world",
+    "psicologia dos relacionamentos", "costumes estranhos pelo mundo",
+
+    # Saúde, corpo e medicina em formato educativo
+    "medical mysteries explained", "medical history dark facts",
+    "medical breakthroughs documentary", "rare conditions explained",
+    "hospital history documentary", "medical fraud cases",
+    "human body mysteries", "sleep science explained",
+    "health myths debunked", "história sombria da medicina",
+    "mistérios médicos explicados", "casos médicos históricos",
+
+    # Ciência estranha, tecnologia obscura e futuro
+    "failed inventions documentary", "technology disasters history",
+    "AI scandals explained", "internet infrastructure explained",
+    "cybersecurity stories documentary", "space mission failures",
+    "abandoned technology projects", "weird engineering failures",
+    "scientific fraud cases", "experiments that went wrong",
+    "invenções fracassadas história", "projetos secretos desclassificados",
+
+    # Horror, paranormal e lendas
+    "paranormal investigations explained", "haunted places history",
+    "creepy folklore around the world", "analog horror explained",
+    "found footage horror lore", "horror game mysteries",
+    "scary stories from history", "cryptid sightings explained",
+    "ghost town documentary", "abandoned places dark history",
+    "lendas urbanas brasileiras", "lugares abandonados histórias",
+    "casos paranormais investigados", "terror analógico explicado",
+
+    # Cinema, séries, animação e cultura pop
+    "movie production disasters", "cancelled movies documentary",
+    "lost television episodes", "animation studio scandals",
+    "cartoon dark theories explained", "movie plot holes explained",
+    "film endings explained", "forgotten science fiction films",
+    "cinema history scandals", "failed TV shows documentary",
+    "histórias sombrias do cinema", "filmes cancelados famosos",
+
+    # Anime, mangá, quadrinhos e fandom
+    "anime dark lore explained", "manga controversies explained",
+    "anime production problems", "forgotten anime series",
+    "comic book dark history", "superhero lore explained",
+    "video game urban legends", "lost game prototypes",
+    "histórias sombrias de animes", "mistérios de jogos antigos",
+
+    # Jogos, apostas e competição digital (conteúdo informativo)
+    "esports scandals documentary", "speedrunning controversies",
+    "gaming industry failures", "video game lawsuits explained",
+    "game studios that shut down", "gaming myths debunked",
+    "competitive gaming dark stories", "forgotten esports teams",
+    "histórias sombrias dos games", "estúdios de jogos que faliram",
+
+    # Religião, seitas, mitologia e arqueologia controversa
+    "religious scandals history", "lost religious texts explained",
+    "ancient cults documentary", "mythology dark stories",
+    "archaeological hoaxes explained", "forbidden archaeology claims",
+    "religious mysteries documentary", "forgotten ancient religions",
+    "seitas famosas história", "mistérios arqueológicos controversos",
+
+    # Geografia, países, fronteiras e lugares extremos
+    "strange borders around the world", "countries that no longer exist",
+    "unrecognized countries explained", "forgotten towns documentary",
+    "isolated communities documentary", "dangerous roads history",
+    "abandoned islands documentary", "places people cannot visit",
+    "fronteiras estranhas do mundo", "países que deixaram de existir",
+
+    # Desastres, sobrevivência, aviação e mar
+    "aviation disasters explained", "shipwreck mysteries documentary",
+    "submarine disasters history", "survival stories documentary",
+    "mountaineering tragedies explained", "industrial disasters history",
+    "bridge failures documentary", "train disasters explained",
+    "deep sea mysteries documentary", "disasters caused by human error",
+    "desastres industriais históricos", "mistérios de naufrágios",
+
+    # Moda, luxo, consumo e subculturas
+    "fashion industry scandals", "luxury brands dark history",
+    "sneaker culture documentary", "counterfeit market explained",
+    "subcultures explained documentary", "streetwear history",
+    "beauty industry controversies", "fashion trends that failed",
+    "história sombria da moda", "subculturas urbanas explicadas",
+
+    # Comédia, fracassos, reações e formatos de entretenimento
+    "comedy history dark stories", "failed viral videos explained",
+    "publicity stunts gone wrong", "pranks gone too far documentary",
+    "awkward moments compilation analysis", "internet fails explained",
+    "weird reality show moments", "strange competitions documentary",
+    "histórias de fracassos virais", "pegadinhas que deram errado",
+
+    # Temas em espanhol, francês, alemão, italiano e outros idiomas
+    "historias oscuras de la música", "misterios del fútbol",
+    "historias desconocidas de la Fórmula 1", "casos criminales sin resolver",
+    "escándalos empresariales", "historias oscuras de famosos",
+    "musique sombre histoires", "mystères du football",
+    "histoires méconnues de la Formule 1", "affaires criminelles non résolues",
+    "dunkle Musikgeschichte", "vergessene Fußballgeschichten",
+    "unbekannte Formel 1 Geschichten", "wahre Kriminalfälle",
+    "storie oscure della musica", "misteri del calcio",
+    "storie sconosciute della Formula 1", "casi criminali irrisolti",
+    "暗い音楽の歴史", "サッカーの知られざる話",
+    "F1の知られざる物語", "足球历史故事", "音乐背后的黑暗故事"
 ]
 
 # Idiomas e regiões de pesquisa.
