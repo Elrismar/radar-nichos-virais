@@ -45,6 +45,16 @@ jobs:
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
           script = html.split("<script>", 1)[1].split("</script>", 1)[0]
+          if "\\nload();" not in script:
+              raise SystemExit("Não foi possível localizar a inicialização do painel.")
+          script = script.rsplit("\\nload();", 1)[0]
+          script = """globalThis.document = { getElementById: () => ({ addEventListener() {} }) };\\n""" + script
+          script += """
+          if (!matchesSearch("Fórmula 1 vídeos incríveis", "formula")) throw new Error("Busca sem acento falhou");
+          if (!matchesSearch("Curiosidades científicas", "curiosidaddes")) throw new Error("Busca com erro de digitação falhou");
+          if (matchesSearch("Uma festa no canal", "art")) throw new Error("Busca curta gerou falso positivo");
+          console.log("Testes de busca do painel aprovados.");
+          """
           Path("/tmp/radar-inline.js").write_text(script, encoding="utf-8")
           for name in ("data/results.json", "data/history.json", "data/tracked.json", "data/run.json"):
               path = Path(name)
@@ -52,6 +62,7 @@ jobs:
                   json.loads(path.read_text(encoding="utf-8"))
           PY
           node --check /tmp/radar-inline.js
+          node /tmp/radar-inline.js
           python - <<'PY'
           import scanner
           pool = scanner.build_search_pool()
