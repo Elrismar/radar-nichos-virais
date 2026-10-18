@@ -330,7 +330,7 @@ def main():
     # Uma busca personalizada opcional substitui a primeira busca do lote,
     # mantendo o limite total de chamadas search.list por execução.
     if CUSTOM_QUERY and selected:
-        selected[0] = (CUSTOM_QUERY, "en", "US")
+        selected[0] = (CUSTOM_QUERY, "", "")
 
     since = (
         TODAY - datetime.timedelta(days=WINDOW_DAYS)
@@ -348,17 +348,20 @@ def main():
 
     for query, lang, region in selected:
         try:
-            data = api("search", {
+            search_params = {
                 "part": "snippet",
                 "type": "video",
                 "q": query,
                 "publishedAfter": since,
                 "order": "viewCount",
                 "maxResults": 50,
-                "regionCode": region,
-                "relevanceLanguage": lang,
                 "safeSearch": "moderate"
-            })
+            }
+            if region:
+                search_params["regionCode"] = region
+            if lang:
+                search_params["relevanceLanguage"] = lang
+            data = api("search", search_params)
             search_count += 1
 
             for item in data.get("items", []):
